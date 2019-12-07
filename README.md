@@ -33,3 +33,10 @@ export OPENPOSE_PYTHONPATH="/usr/local/python"
 
 # Usage
 
+
+
+# Format
+
+I'm using `Pose Output Format (COCO)` and `Hand Output Format` from this [page](https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/output.md).
+
+

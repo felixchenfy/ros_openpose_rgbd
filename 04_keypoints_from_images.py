@@ -4,23 +4,30 @@ import os
 from sys import platform
 import argparse
 import time
-
+import numpy as np
+from tempfile import TemporaryFile
 if True:  # Import openpose
     OPENPOSE_PYTHONPATH = os.environ['OPENPOSE_PYTHONPATH']
     sys.path.append(OPENPOSE_PYTHONPATH)
     from openpose import pyopenpose as op
+    ROOT = os.path.dirname(os.path.abspath(__file__))+'/'
 
 ''' -------------------------------------- Settings -------------------------------------- '''
 
 OPENPOSE_HOME = os.environ['OPENPOSE_HOME'] + "/"
 MODEL_PATH = OPENPOSE_HOME + "models/"
+DST_FOLDER = ROOT + "output/"
+DST_POSE_FILE = DST_FOLDER + "body_joints.npy"
+DST_HAND_FILE = DST_FOLDER + "hand_joints.npy"
+if not os.path.exists(DST_FOLDER):
+    os.makedirs(DST_FOLDER)
 
 ''' ------------------------------- Command line arguments ------------------------------- '''
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--image_dir", 
+    parser.add_argument("--image_dir",
                         # default=OPENPOSE_HOME+"examples/media/",
                         default="data/two_images/",
                         help="Process a directory of images. Read all standard formats (jpg, png, bmp, etc.).")
@@ -32,16 +39,17 @@ def parse_args():
 
 args = parse_args()
 
+
 def set_openpose_params():
     ''' Custom openpose params.
     (Refer to $OPENPOSE_HOME/include/openpose/flags.hpp for more parameters.)
     '''
     params = dict()
     params["model_folder"] = MODEL_PATH
-    params["face"] = False # I haven't done this.
+    params["face"] = False  # I haven't done this.
     params["hand"] = True
-    params["net_resolution"] = "320x240" # e.g.: "240x160"
-    params["model_pose"] = "BODY_25" # Choices: [BODY_25, COCO, MPI, MPI_4_layers]
+    params["net_resolution"] = "320x240"  # e.g.: "240x160"
+    params["model_pose"] = "COCO"  # Please use "COCO".
 
     # Add others settings from command line arguments to `params`
     for i in range(0, len(args[1])):
@@ -59,7 +67,22 @@ def set_openpose_params():
             if key not in params:
                 params[key] = next_item
     return params
+
+
 params = set_openpose_params()
+
+
+def save_result(datum, pose_file, hand_file):
+    ''' Save body and hand joints to two binary files. '''
+
+    def save_binary(filename, data):
+        np.save(filename, np.array(data))
+
+    def save_txt(filename, data):
+        np.savetxt(filename, np.array(data), delimiter=",")
+
+    save_binary(pose_file, datum.poseKeypoints)
+    save_binary(hand_file, datum.handKeypoints)
 
 
 # Starting OpenPose
@@ -79,6 +102,11 @@ for i, imagePath in enumerate(imagePaths):
     opWrapper.emplaceAndPop([datum])
 
     print("Body keypoints: \n" + str(datum.poseKeypoints))
+    print("Hand keypoints: \n" + str(datum.handKeypoints))
+    # print(type(datum.handKeypoints)) # <class 'list'>
+    # print(type(datum.handKeypoints[0])) # <class 'numpy.ndarray'>
+
+    save_result(datum, DST_POSE_FILE, DST_HAND_FILE)
 
     if not args[0].no_display:
         cv2.imshow("OpenPose 1.5.1 - Tutorial Python API", datum.cvOutputData)
@@ -86,7 +114,7 @@ for i, imagePath in enumerate(imagePaths):
         key = cv2.waitKey(0)
         if key == 27:
             break
-
+    break
 end = time.time()
 print("OpenPose demo successfully finished. Total time: " +
       str(end - start) + " seconds")
