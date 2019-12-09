@@ -1,5 +1,41 @@
 import numpy as np
 
+
+class RgbdImage(object):
+    def __init__(self, depth, camera_info, depth_unit=0.001, color=None):
+        '''
+        Arguments:
+            depth {image}: depth image of type np.uint16.
+            camera_info {CameraInfo}:
+            depth_unit {float}: depth[i,j]*depth_unit is it's real depth in meters.
+            color {image}.
+        '''
+        self._depth = depth.astype(np.float32) * depth_unit
+        self._camera_info = camera_info
+        self._color = color
+        self._row, self._col, self._fx, self._fy, self._cx, self._cy = camera_info.get_cam_params()
+
+    def get_3d_pos(self, x, y):
+        '''
+        Get the 3d position of the pixel (y, x) from depth image.
+        The pixel is at yth row and xth column.
+        '''
+        row, col = self._01xy_to_row_col(x, y)
+        d = self._depth[row, col]
+        xyz = [
+            (col - self._cx)*d/self._fx,
+            (row - self._cy)*d/self._fy,
+            d]
+        return xyz
+
+    def is_depth_valid(self, x, y):
+        row, col = self._01xy_to_row_col(x, y)
+        return self._depth[row, col] >= 0.00001
+
+    def _01xy_to_row_col(self, x, y):
+        row, col = round(self._row * y), round(self._col * x)
+        return row, col
+
 class CameraInfo():
 
     def __init__(self, camera_info_json_file_path):
