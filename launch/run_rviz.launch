@@ -1,0 +1,6 @@
+<launch>
+   
+    <node type="rviz" name="rviz" pkg="rviz" 
+        args="-d $(find ros_openpose_rgbd)/config/rviz_humans.rviz" />
+
+</launch>

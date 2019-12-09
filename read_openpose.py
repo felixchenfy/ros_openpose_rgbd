@@ -48,5 +48,3 @@ def test_data_reading_speed():
             "data/two_images/COCO_val2014_000000000328.jpg", cv2.IMREAD_COLOR)
     print("Read one image data of 3 people takes {}s.".format(
         (time.time()-t0)/test_times))
-
-test_data_reading_speed()
