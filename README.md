@@ -34,6 +34,22 @@ export OPENPOSE_PYTHONPATH="/usr/local/python"
 # Usage
 
 
+# Program structure
+
+lib_openpose_detector.py: test detection
+lib_rviz_drawer: test read detection result and display.
+detect_imgs_from_rostopic.py # from rostopic
+detect_imgs_from_disk.py  # from local disk
+
+明天先把ros_record_rgbd给更新一下, 把color/depth分开保存.
+然后打扫一下卫生, 采集一些数据.
+洗一下鞋子.
+采集一下数据
+
+11点去食堂吃饭.
+晚上吃睡觉.
+
+明年去超市.
 
 # Format
 

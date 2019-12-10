@@ -320,8 +320,10 @@ def main():
 
     camera_pose_publisher = CameraPosePublisher()
     rate = rospy.Rate(1.0)
+
     prev_humans = []
     while not rospy.is_shutdown():
+
         rgbd, body_joints, hand_joints = read_next_data()
         N_people = len(body_joints)
 
@@ -336,6 +338,7 @@ def main():
         for human in prev_humans:
             human.delete_rviz()
         prev_humans = humans
+
         camera_pose_publisher.publish()
         rate.sleep()
 
