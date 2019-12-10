@@ -4,9 +4,7 @@
   <name>ros_openpose_rgbd</name>
   <version>1.2.0</version>
   
-  <description>
-    Detect planes from depth image.
-  </description>
+  <description> Draw 3D human skeletons in rviz. </description>
   <license>BSD</license>
   
   <author>feiyu</author>
@@ -20,7 +18,5 @@
   <depend>std_msgs</depend>
   <depend>sensor_msgs</depend>
   <depend>geometry_msgs</depend>
-
-  <build_depend>message_generation</build_depend>
   <exec_depend>message_runtime</exec_depend>
 </package>
