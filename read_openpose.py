@@ -18,12 +18,6 @@ if True:  # Add project root
 
 ''' ------------------------------- Settings ------------------------------- '''
 
-
-# -- Input human joints.
-SRC_FOLDER = ROOT + "output/"
-SRC_POSE_FILE = SRC_FOLDER + "body_joints.npy"
-SRC_HAND_FILE = SRC_FOLDER + "hand_joints.npy"
-
 # -- Input camera info and depth image.
 CAMERA_INFO_FILE_PATH = ROOT + "config/cam_params_realsense.json"
 CAMERA_INFO = CameraInfo(CAMERA_INFO_FILE_PATH)
@@ -271,33 +265,6 @@ class Human(object):
 ''' -------------------------------------- Helper Functions -------------------------------------- '''
 
 
-def read_joints_of_an_image():
-    body_joints = np.load(SRC_POSE_FILE)
-    hand_joints = np.load(SRC_HAND_FILE)
-    return body_joints, hand_joints
-
-
-def test_data_reading_speed():
-    t0 = time.time()
-    test_times = 100
-    for i in range(test_times):
-        body_joints, hand_joints = read_joints_of_an_image()
-        # print("body_joints: ", body_joints)
-        img = cv2.imread(
-            "data/two_images/COCO_val2014_000000000328.jpg", cv2.IMREAD_COLOR)
-    print("Read one image data of 3 people takes {}s.".format(
-        (time.time()-t0)/test_times))
-
-
-def read_next_data():
-    body_joints, hand_joints = read_joints_of_an_image()
-    color = cv2.imread(
-        "data/two_images/COCO_val2014_000000000328.jpg", cv2.IMREAD_COLOR)
-    depth = np.zeros(color.shape[0:2], np.uint16) + 1000  # 1m
-    rgbd = RgbdImage(depth, CAMERA_INFO, DEPTH_UNIT, color)
-    return rgbd, body_joints, hand_joints
-
-
 class CameraPosePublisher(object):
     def __init__(self):
         self._br = tf.TransformBroadcaster()
@@ -313,35 +280,68 @@ class CameraPosePublisher(object):
                                BASE_FRAME)
 
 
-''' -------------------------------------- Main -------------------------------------- '''
+''' -------------------------------------- Unit Test -------------------------------------- '''
+
+if __name__ == '__main__':
 
 
-def main():
+    # -- Settings.
+    SRC_FOLDER = ROOT + "output/"
+    SRC_POSE_FILE = SRC_FOLDER + "body_joints.npy"
+    SRC_HAND_FILE = SRC_FOLDER + "hand_joints.npy"
+    
+    # -- Functions.
+    def read_joints_of_an_image():
+        body_joints = np.load(SRC_POSE_FILE)
+        hand_joints = np.load(SRC_HAND_FILE)
+        return body_joints, hand_joints
 
-    camera_pose_publisher = CameraPosePublisher()
-    rate = rospy.Rate(1.0)
+    def test_data_reading_speed():
+        t0 = time.time()
+        test_times = 100
+        for i in range(test_times):
+            body_joints, hand_joints = read_joints_of_an_image()
+            # print("body_joints: ", body_joints)
+            img = cv2.imread(
+                "data/two_images/COCO_val2014_000000000328.jpg", cv2.IMREAD_COLOR)
+        print("Read one image data of 3 people takes {}s.".format(
+            (time.time()-t0)/test_times))
 
-    prev_humans = []
-    while not rospy.is_shutdown():
+    def read_next_data():
+        body_joints, hand_joints = read_joints_of_an_image()
+        color = cv2.imread(
+            "data/two_images/COCO_val2014_000000000328.jpg", cv2.IMREAD_COLOR)
+        depth = np.zeros(color.shape[0:2], np.uint16) + 1000  # 1m
+        rgbd = RgbdImage(depth, CAMERA_INFO, DEPTH_UNIT, color)
+        return rgbd, body_joints, hand_joints
 
-        rgbd, body_joints, hand_joints = read_next_data()
-        N_people = len(body_joints)
+    # -- Main.
+    def main():
 
-        humans = []
-        for i in range(N_people):
-            human = Human(rgbd, body_joints[i, :, :],
-                          hand_joints[:, i, :, :])
-            human.draw_rviz()
-            rospy.loginfo("Drawing {}th person on rviz.".format(human._id))
-            humans.append(human)
 
-        for human in prev_humans:
-            human.delete_rviz()
-        prev_humans = humans
+        camera_pose_publisher = CameraPosePublisher()
+        rate = rospy.Rate(1.0)
 
-        camera_pose_publisher.publish()
-        rate.sleep()
+        prev_humans = []
+        while not rospy.is_shutdown():
 
+            rgbd, body_joints, hand_joints = read_next_data()
+            N_people = len(body_joints)
+
+            humans = []
+            for i in range(N_people):
+                human = Human(rgbd, body_joints[i, :, :],
+                              hand_joints[:, i, :, :])
+                human.draw_rviz()
+                rospy.loginfo("Drawing {}th person on rviz.".format(human._id))
+                humans.append(human)
+
+            for human in prev_humans:
+                human.delete_rviz()
+            prev_humans = humans
+
+            camera_pose_publisher.publish()
+            rate.sleep()
 
 if __name__ == '__main__':
     node_name = "sub_rgbd_and_cloud"

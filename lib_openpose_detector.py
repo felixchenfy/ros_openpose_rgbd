@@ -55,7 +55,7 @@ class OpenposeDetector(object):
         # print("Hand keypoints: \n" + str(datum.handKeypoints))
         return datum
 
-    def save_result(self, datum, pose_filename, hand_filename):
+    def save_joints_positions(self, datum, pose_filename, hand_filename):
         ''' Save body and hand joints to two binary files. '''
 
         def save_binary(filename, data):
@@ -66,6 +66,7 @@ class OpenposeDetector(object):
 
         save_binary(pose_filename, datum.poseKeypoints)
         save_binary(hand_filename, datum.handKeypoints)
+
         # To load the data, use:
         # bodies_joints = np.load(pose_filename)
         # hands_joints = np.load(hand_filename)
@@ -101,57 +102,67 @@ class OpenposeDetector(object):
         return params
 
 
-def test_on_images():
-    ''' -------------------------------------- Settings -------------------------------------- '''
-    DST_FOLDER = ROOT + "output/"
-    DST_pose_filename = DST_FOLDER + "body_joints.npy"
-    DST_hand_filename = DST_FOLDER + "hand_joints.npy"
-    if not os.path.exists(DST_FOLDER):
-        os.makedirs(DST_FOLDER)
+def makedir(folder):
+    folder = os.path.dirname(folder)
+    if not os.path.exists(folder):
+        os.makedirs(folder)
 
-    ''' -------------------------------------- Command line arguments -------------------------------------- '''
+
+''' -------------------------------------- Unit Test -------------------------------------- '''
+
+
+def test_openpose_on_images():
+    # -- Settings.
+    DST_FOLDER = ROOT + "output/"
+
+    # -- Command line arguments.
     def parse_args():
         parser = argparse.ArgumentParser()
         parser.add_argument("--image_dir",
-                            # default=OPENPOSE_HOME+"examples/media/",
-                            default="data/two_images/",
-                            help="Process a directory of images. Read all standard formats (jpg, png, bmp, etc.).")
-        parser.add_argument("--no_display", default=False,
-                            help="Enable to disable the visual display.")
+                            default=ROOT+"data/one_image/",
+                            help="Process a directory of images. "
+                            "Read all standard formats (jpg, png, bmp, etc.).")
         args = parser.parse_known_args()
         return args
 
     args = parse_args()
 
-    ''' -------------------------------------- Read; Detect; Save. -------------------------------------- '''
+    # -- Setup variables.
     detector = OpenposeDetector()
+    makedir(DST_FOLDER)
 
-    # Read frames on directory
+    # -- Read images and detect.
     imagePaths = op.get_images_on_directory(args[0].image_dir)
-    start = time.time()
-
-    # Process and display images
     for i, imagePath in enumerate(imagePaths):
-        datum = op.Datum()
+        t0 = time.time()
+
+        # Read image.
         color_image = cv2.imread(imagePath)
 
+        # Detect human skeletons.
         datum = detector.detect(color_image)
+        print("Image {}/{}. Total time = {} seconds.".format(
+            i+1, len(imagePaths), time.time()-t0))
 
-        detector.save_result(datum, DST_pose_filename, DST_hand_filename)
+        # Save.
+        s = DST_FOLDER + "{:05d}".format(i) + "_"
+        filename_body = s + "body_joints.npy"
+        filename_hand = s + "hand_joints.npy"
+        filename_image = s + "result.jpg"
 
-        if not args[0].no_display:
-            cv2.imshow("OpenPose 1.5.1 - Tutorial Python API",
-                       datum.cvOutputData)
-            # key = cv2.waitKey(15)
-            key = cv2.waitKey(0)
-            if key == 27:
-                break
+        detector.save_joints_positions(
+            datum, filename_body, filename_hand)
 
-    end = time.time()
-    print("OpenPose demo successfully finished. Total time: " +
-          str(end - start) + " seconds")
-    print("Total images: {}".format(len(imagePaths)))
+        image_with_skeletons_on_it = datum.cvOutputData
+        cv2.imwrite(filename_image, image_with_skeletons_on_it)
+        print("  Write results to: " + s)
+
+        # Show.
+        cv2.imshow("Detection Result", image_with_skeletons_on_it)
+        key = cv2.waitKey(15)
+        if key == 27:
+            break
 
 
 if __name__ == '__main__':
-    test_on_images()
+    test_openpose_on_images()

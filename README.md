@@ -33,6 +33,13 @@ export OPENPOSE_PYTHONPATH="/usr/local/python"
 
 # Usage
 
+# Unit test
+
+## lib_openpose_detector.py
+```
+python lib_openpose_detector.py
+```
+The test case reads images from [data/one_image/](data/one_image/) and ouputs the results to [output/](output/).
 
 # Program structure
 
