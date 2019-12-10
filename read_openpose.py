@@ -2,33 +2,55 @@ import numpy as np
 import time
 import cv2
 import rospy
+import tf
+from tf.transformations import quaternion_from_matrix
 
 from abc import ABCMeta, abstractmethod  # Abstract class.
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import Point, Quaternion, Pose
+
 if True:  # Add project root
     import sys
     import os
     ROOT = os.path.dirname(os.path.abspath(__file__))+'/'
 
     from utils.lib_rgbd import RgbdImage, CameraInfo
+    from utils.lib_ros_marker import MarkerDrawer
 
 ''' ------------------------------- Settings ------------------------------- '''
+
+
+# -- Input human joints.
+SRC_FOLDER = ROOT + "output/"
+SRC_POSE_FILE = SRC_FOLDER + "body_joints.npy"
+SRC_HAND_FILE = SRC_FOLDER + "hand_joints.npy"
+
+# -- Input camera info and depth image.
 CAMERA_INFO_FILE_PATH = ROOT + "config/cam_params_realsense.json"
 CAMERA_INFO = CameraInfo(CAMERA_INFO_FILE_PATH)
 DEPTH_UNIT = 0.001  # Unit: meter.
+
+# -- Tf frames.
+BASE_FRAME = "base"
+CAMERA_FRAME = "camera_link"
+CAMERA_POSE = np.array([  # 3x4 Transformation matrix.
+    [0.,  0.,  1., 0.],  # Camera faces +x direction.
+    [-1., 0.,  0., 0.],
+    [0.,  -1., 0., 0.],
+    [0.,  0., 0., 1.],
+])
+
+# -- Visualization in RVIZ.
+rviz_drawer = MarkerDrawer(
+    frame_id=BASE_FRAME, topic_name="visualization_marker")
+MARKER_SIZE = 0.01
+MARKER_COLOR = 'g'
 
 ''' ------------------------------- Classes ------------------------------- '''
 
 
 class Link(object):
-    def __init__(self):
-        pass
-
-
-class Joint3d(object):
-    def __init__(self, xyz):
-        self.is_valid = xyz[-1] > 0.00001
-        self.xyz = xyz
+    def __init__(self, xyz1, xyz2):
+        self.xyz1, self.xyz2 = xyz1, xyz2
 
 
 class AbstractPart(object):
@@ -41,31 +63,56 @@ class AbstractPart(object):
         Arguments:
             joints {2D array}:
                 shape = (_N_LINKS, 3)
-                Each row represents a joint. 
+                Each row represents a joint.
                 See `doc/keypoints_pose_coco_18.png` or `doc/keypoints_hand.png`.
         '''
         self._id = id
         self._rgbd = rgbd
-        self._joints_3d = self._create_3d_joints(joints)
-        self._links = self._create_links(self._joints_3d)
+        self._links = self._create_links(joints)
+        self._links_marker_ids = []
+
+    def draw_rviz(self):
+        for i, link in enumerate(self._links):
+            link_id = self._id + i
+            rviz_drawer.draw_link(
+                link_id, link.xyz1, link.xyz2, size=MARKER_SIZE, color=MARKER_COLOR)
+            self._links_marker_ids.append(link_id)
+
+    def delete_rviz(self):
+        for link_id in self._links_marker_ids:
+            rviz_drawer.delete_marker(link_id)
 
     def _create_3d_joints(self, joints_2d):
-        joints_3d = [Joint3d(self._rgbd.get_3d_pos(joint_x, joint_y))
-                     for joint_x, joint_y, confidence in joints_2d]
-        return joints_3d
+        list_xyz_in_camera = [self._rgbd.get_3d_pos(joint_2d_x, joint_2d_y)
+                              for joint_2d_x, joint_2d_y, confidence in joints_2d]  # Nx3
+        list_xyz_in_world = CAMERA_POSE.dot(np.hstack(
+            (np.array(list_xyz_in_camera),
+             np.ones((len(joints_2d), 1), np.float64))).T).T[:, 0:3] # Nx3
 
-    def _create_links(self, joints_3d):
-        links = [Link(joints_3d[idx_1].xyz, joints_3d[idx_2].xyz)
+        EPS = 0.0001
+
+        def is_valid(i, joint_2d_x, joint_2d_y):
+            valid_depth = list_xyz_in_camera[i][-1] >= EPS
+            valid_row_col = joint_2d_x >= EPS or joint_2d_y >= EPS
+            return valid_depth and valid_row_col
+
+        list_validity = [is_valid(i, col_row_conf[0], col_row_conf[1])
+                         for i, col_row_conf in enumerate(joints_2d)]
+
+        return list_xyz_in_world, list_validity
+
+    def _create_links(self, joints_2d):
+        '''
+        The invalid links are abandoned.
+        '''
+        list_xyz_in_world, list_validity = self._create_3d_joints(joints_2d)
+        links = [Link(list_xyz_in_world[idx_1], list_xyz_in_world[idx_2])
                  for idx_1, idx_2 in self._LINKS_TABLE
-                 if joints_3d[idx_1].is_valid and joints_3d[idx_2].is_valid]
+                 if list_validity[idx_1] and list_validity[idx_2]]
         return links
 
-    @abstractmethod
-    def draw_rviz(self):
-        pass
 
-
-class Body(object):
+class Body(AbstractPart):
     _N_LINKS = 18
     _LINKS_TABLE = [
         [0, 1],
@@ -90,10 +137,8 @@ class Body(object):
     def __init__(self, *args):
         super(Body, self).__init__(*args)
 
-    def _create_links(self, joints):
 
-
-class Hand(object):
+class Hand(AbstractPart):
     _N_LINKS = 21
     _LINKS_TABLE = [
         [0, 1],
@@ -118,8 +163,8 @@ class Hand(object):
         [19, 20],
     ]
 
-    def __init__(self, id, rgbd, joints):
-        pass
+    def __init__(self, *args):
+        super(Hand, self).__init__(*args)
 
 
 class Human(object):
@@ -128,31 +173,37 @@ class Human(object):
     def __init__(self, rgbd, body_joints, hand_joints):
         Human._cnt_all_humans += 1
         self._id = Human._cnt_all_humans
+        self._has_displayed = False
         self.set_joints(rgbd, body_joints, hand_joints)
         pass
 
     def set_joints(self, rgbd, body_joints, hand_joints):
-        self._body = Body(self._id, rgbd, body_joints)
-        self._left_hand = Hand(self._id, rgbd, hand_joints[0])
-        self._right_hand = Hand(self._id, rgbd, hand_joints[1])
+
+        GAP = 100  # Make id different in order to draw in rviz.
+        id_body = self._id * GAP + 0
+        id_l_hand = self._id * GAP + 30
+        id_r_hand = self._id * GAP + 60
+        self._body = Body(id_body, rgbd, body_joints)
+        self._left_hand = Hand(id_l_hand, rgbd, hand_joints[0])
+        self._right_hand = Hand(id_r_hand, rgbd, hand_joints[1])
 
         # Store all the above into a list.
         self._parts = [self._body, self._left_hand, self._right_hand]
-        self._is_displayed = False
 
     def draw_rviz(self):
         for part in self._parts:
             part.draw_rviz()
-        self._is_displayed = True
+            rospy.sleep(0.0001)
+        self._has_displayed = True
 
     def delete_rviz(self):
-        if self._is_displayed:
+        if self._has_displayed:
             for part in self._parts:
                 part.delete_rviz()
-        self._is_displayed = False
+        self._has_displayed = False
 
-    def __del__(self):
-        self.delete_rviz()
+    # def __del__(self):
+    #     self.delete_rviz()
 
     # def get_Pointer_directions(self):
     #     ''' Get where each hand is pointing to. '''
@@ -181,28 +232,7 @@ class Human(object):
     #         pass
 
 
-class Timer(object):
-    def __init__(self):
-        self.t0 = time.time()
-
-    def report_time(self, str_msg):
-        t = time.time() - self.t0
-        t = "{:.3f}".format(t)
-        print("'{}' takes {} seconds".format(str_msg, t))
-
-    def report_time_and_reset(self, str_msg):
-        self.report_time(str_msg)
-        self.reset()
-
-    def reset(self):
-        self.t0 = time.time()
-
-
-''' -------------------------------------- Settings -------------------------------------- '''
-
-SRC_FOLDER = ROOT + "output/"
-SRC_POSE_FILE = SRC_FOLDER + "body_joints.npy"
-SRC_HAND_FILE = SRC_FOLDER + "hand_joints.npy"
+''' -------------------------------------- Helper Functions -------------------------------------- '''
 
 
 def read_joints_of_an_image():
@@ -232,17 +262,52 @@ def read_next_data():
     return rgbd, body_joints, hand_joints
 
 
+class CameraPosePublisher(object):
+    def __init__(self):
+        self._br = tf.TransformBroadcaster()
+        self._p = CAMERA_POSE[0:3, 3]
+        self._q = quaternion_from_matrix(CAMERA_POSE)
+        # self._q = Quaternion(q[0], q[1], q[2], q[3])
+        self.publish()
+
+    def publish(self):
+        print(self._q)
+        self._br.sendTransform(self._p, self._q,
+                               rospy.Time.now(),
+                               CAMERA_FRAME,
+                               BASE_FRAME)
+
+
+''' -------------------------------------- Main -------------------------------------- '''
+
+
 def main():
-    rate = rospy.Rate(1)
+
+    camera_pose_publisher = CameraPosePublisher()
+    rate = rospy.Rate(1.0)
     prev_humans = []
     while not rospy.is_shutdown():
         rgbd, body_joints, hand_joints = read_next_data()
         N_people = len(body_joints)
-        humans = [Human(rgbd, body_joints[i], hand_joints[i])
-                  for i in range(N_people)]
-        for human in humans:
+
+        humans = []
+        for i in range(N_people):
+            human = Human(rgbd, body_joints[i, :, :],
+                          hand_joints[:, i, :, :])
             human.draw_rviz()
+            rospy.loginfo("Drawing {}th person on rviz.".format(human._id))
+            humans.append(human)
+
         for human in prev_humans:
             human.delete_rviz()
         prev_humans = humans
+        camera_pose_publisher.publish()
         rate.sleep()
+
+
+if __name__ == '__main__':
+    node_name = "sub_rgbd_and_cloud"
+    rospy.init_node(node_name)
+    rospy.sleep(0.1)
+    main()
+    rospy.logwarn("Node `{}` stops.".format(node_name))

@@ -8,21 +8,28 @@ Unit test:
 '''
 
 from visualization_msgs.msg import Marker
-from std_msgs.msg import Header
+from std_msgs.msg import Header, ColorRGBA
 import rospy
 import copy
 import math
 from geometry_msgs.msg import Point
 
+COLORS={ # [r, g, b, a]
+    'r': ColorRGBA(1., 0., 0., 1.), # red
+    'g': ColorRGBA(0., 1., 0., 1.), # green
+    'b': ColorRGBA(0., 0., 1., 1.), # blue
+    'k': ColorRGBA(0., 0., 0., 1.), # black
+    'y': ColorRGBA(1., 1., 0., 1.), # yellow
+}
 
 class MarkerDrawer(object):
-    def __init__(self, frame_id="map", topic_name="visualization_marker"):
+    def __init__(self, frame_id="base", topic_name="visualization_marker"):
 
-        self._pub = rospy.Publisher(topic_name, Marker, queue_size=10)
+        self._pub = rospy.Publisher(topic_name, Marker, queue_size=400)
         self._MARKER_TEMPLATE = self._create_template_marker()
         self._MARKER_TEMPLATE.header.frame_id = frame_id
 
-    def draw_dot(self, id, xyz, size=0.1, lifetime=-1):
+    def draw_dot(self, id, xyz, size=0.1, lifetime=-1, color='r'):
         marker = copy.deepcopy(self._MARKER_TEMPLATE)
         marker.id = id
         marker.type = marker.SPHERE
@@ -33,19 +40,27 @@ class MarkerDrawer(object):
         marker.scale.x = size
         marker.scale.y = size
         marker.scale.z = size
+        marker.color = COLORS[color]
         if lifetime > 0:
             marker.lifetime = rospy.Duration(lifetime)
         self._pub.publish(marker)
 
-    def draw_link(self, id, xyz1, xyz2, size=0.1, lifetime=-1):
+    def draw_link(self, id, xyz1, xyz2, size=0.1, lifetime=-1, color='r'):
         marker = copy.deepcopy(self._MARKER_TEMPLATE)
         marker.id = id
         marker.type = marker.LINE_LIST
         marker.header.stamp = rospy.Time.now()
         marker.points = [Point(*xyz1), Point(*xyz2)]
         marker.scale.x = size
+        marker.color = COLORS[color]
         if lifetime > 0:
             marker.lifetime = rospy.Duration(lifetime)
+        self._pub.publish(marker)
+
+    def delete_marker(self, id):
+        marker = copy.deepcopy(self._MARKER_TEMPLATE)
+        marker.id = id
+        marker.action = marker.DELETE
         self._pub.publish(marker)
 
     def _create_template_marker(self):
@@ -92,15 +107,19 @@ if __name__ == '__main__':
         # Draw marker
         ite += 1
         if ite > 1:
-            drawer.draw_dot(id=ite, 
-                            xyz=[x, y, 0], 
+            drawer.draw_dot(id=ite,
+                            xyz=[x, y, 0],
                             size=0.1,
                             lifetime=lifetime)
             drawer.draw_link(id=ite+10000,
                              xyz1=[x, y, 0],
                              xyz2=[x_pre, y_pre, 0],
                              size=0.01,
-                            lifetime=lifetime)
+                             lifetime=lifetime)
+            TEST_DELETE = True
+            if TEST_DELETE: # Delete the previous dot.
+                # So there is only one dot being visualized in rviz.
+                drawer.delete_marker(ite-1)
 
         # Update info.
         x_pre = x

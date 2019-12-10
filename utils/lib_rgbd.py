@@ -1,4 +1,5 @@
 import numpy as np
+import simplejson
 
 
 class RgbdImage(object):
@@ -20,7 +21,7 @@ class RgbdImage(object):
         Get the 3d position of the pixel (y, x) from depth image.
         The pixel is at yth row and xth column.
         '''
-        row, col = self._01xy_to_row_col(x, y)
+        row, col = self._xy_to_row_col(x, y)
         d = self._depth[row, col]
         xyz = [
             (col - self._cx)*d/self._fx,
@@ -29,12 +30,13 @@ class RgbdImage(object):
         return xyz
 
     def is_depth_valid(self, x, y):
-        row, col = self._01xy_to_row_col(x, y)
+        row, col = self._xy_to_row_col(x, y)
         return self._depth[row, col] >= 0.00001
 
-    def _01xy_to_row_col(self, x, y):
-        row, col = round(self._row * y), round(self._col * x)
-        return row, col
+    def _xy_to_row_col(self, x, y):
+        # row, col = round(self._row * y), round(self._col * x)
+        return int(round(y)), int(round(x))
+
 
 class CameraInfo():
 
