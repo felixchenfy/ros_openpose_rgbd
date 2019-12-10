@@ -42,8 +42,11 @@ CAMERA_POSE = np.array([  # 3x4 Transformation matrix.
 # -- Visualization in RVIZ.
 rviz_drawer = MarkerDrawer(
     frame_id=BASE_FRAME, topic_name="visualization_marker")
-MARKER_SIZE = 0.01
-MARKER_COLOR = 'g'
+LINK_SIZE = 0.003
+LINK_COLOR = 'g'
+IS_DRAW_DOTS = False  # This slows down rviz and makes it unstable.
+DOT_SIZE = 0.01
+DOT_COLOR = 'r'
 
 ''' ------------------------------- Classes ------------------------------- '''
 
@@ -69,52 +72,78 @@ class AbstractPart(object):
         self._id = id
         self._rgbd = rgbd
         self._links = self._create_links(joints)
-        self._links_marker_ids = []
+        self._marker_ids = []
 
     def draw_rviz(self):
+        curr_id = self._id
         for i, link in enumerate(self._links):
-            link_id = self._id + i
-            rviz_drawer.draw_link(
-                link_id, link.xyz1, link.xyz2, size=MARKER_SIZE, color=MARKER_COLOR)
-            self._links_marker_ids.append(link_id)
+            rviz_drawer.draw_links(
+                curr_id, link, size=LINK_SIZE, color=LINK_COLOR)
+            curr_id += 1
+            self._marker_ids.append(curr_id)
+        if IS_DRAW_DOTS:
+            for i, link in enumerate(self._links):
+                rviz_drawer.draw_dots(
+                    curr_id, link, size=DOT_SIZE, color=DOT_COLOR)
+                curr_id += 1
+                self._marker_ids.append(curr_id)
 
     def delete_rviz(self):
-        for link_id in self._links_marker_ids:
-            rviz_drawer.delete_marker(link_id)
+        for markder_id in self._marker_ids:
+            rviz_drawer.delete_marker(markder_id)
 
     def _create_3d_joints(self, joints_2d):
-        list_xyz_in_camera = [self._rgbd.get_3d_pos(joint_2d_x, joint_2d_y)
-                              for joint_2d_x, joint_2d_y, confidence in joints_2d]  # Nx3
-        list_xyz_in_world = CAMERA_POSE.dot(np.hstack(
-            (np.array(list_xyz_in_camera),
-             np.ones((len(joints_2d), 1), np.float64))).T).T[:, 0:3] # Nx3
+        joints_xyz_in_camera = [self._rgbd.get_3d_pos(joint_2d_x, joint_2d_y)
+                                for joint_2d_x, joint_2d_y, confidence in joints_2d]  # Nx3
+        joints_xyz_in_world = CAMERA_POSE.dot(np.hstack(
+            (np.array(joints_xyz_in_camera),
+             np.ones((len(joints_2d), 1), np.float64))).T).T[:, 0:3]  # Nx3
 
         EPS = 0.0001
 
         def is_valid(i, joint_2d_x, joint_2d_y):
-            valid_depth = list_xyz_in_camera[i][-1] >= EPS
+            valid_depth = joints_xyz_in_camera[i][-1] >= EPS
             valid_row_col = joint_2d_x >= EPS or joint_2d_y >= EPS
             return valid_depth and valid_row_col
 
-        list_validity = [is_valid(i, col_row_conf[0], col_row_conf[1])
-                         for i, col_row_conf in enumerate(joints_2d)]
+        joints_validity = [is_valid(i, col_row_conf[0], col_row_conf[1])
+                           for i, col_row_conf in enumerate(joints_2d)]
 
-        return list_xyz_in_world, list_validity
+        return joints_xyz_in_world, joints_validity
 
     def _create_links(self, joints_2d):
         '''
-        The invalid links are abandoned.
+        Return:
+            valid_links {list}:
+                Each element is a link.
+                A link is a list of joint positions.
         '''
-        list_xyz_in_world, list_validity = self._create_3d_joints(joints_2d)
-        links = [Link(list_xyz_in_world[idx_1], list_xyz_in_world[idx_2])
-                 for idx_1, idx_2 in self._LINKS_TABLE
-                 if list_validity[idx_1] and list_validity[idx_2]]
-        return links
+        joints_xyz_in_world, joints_validity = self._create_3d_joints(
+            joints_2d)
+        valid_links = []
+        for joints_indices in self._LINKS_TABLE:
+            ith_link = []
+            for joint_idx in joints_indices:
+                if joints_validity[joint_idx]:
+                    ith_link.append(joints_xyz_in_world[joint_idx])
+                else:
+                    break
+            if len(ith_link) >= 2:
+                valid_links.append(ith_link)
+        return valid_links
 
 
 class Body(AbstractPart):
     _N_LINKS = 18
     _LINKS_TABLE = [
+        [0, 1, 2, 3, 4],
+        [1, 5, 6, 7],
+        [1, 8, 9, 10],
+        [1, 11, 12, 13],
+        [0, 14, 16],
+        [0, 15, 17],
+    ]
+    _LINKS_TABLE_SINGLE = [
         [0, 1],
         [1, 2],
         [2, 3],
@@ -141,6 +170,13 @@ class Body(AbstractPart):
 class Hand(AbstractPart):
     _N_LINKS = 21
     _LINKS_TABLE = [
+        [0, 1, 2, 3, 4],
+        [0, 5, 6, 7, 8],
+        [0, 9, 10, 11, 12],
+        [0, 13, 14, 15, 16],
+        [0, 17, 18, 19, 20]
+    ]
+    _LINKS_TABLE_SINGLE = [
         [0, 1],
         [1, 2],
         [2, 3],
@@ -271,7 +307,6 @@ class CameraPosePublisher(object):
         self.publish()
 
     def publish(self):
-        print(self._q)
         self._br.sendTransform(self._p, self._q,
                                rospy.Time.now(),
                                CAMERA_FRAME,

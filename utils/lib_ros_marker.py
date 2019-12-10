@@ -23,6 +23,7 @@ COLORS={ # [r, g, b, a]
 }
 
 class MarkerDrawer(object):
+    # Reference: http://wiki.ros.org/rviz/DisplayTypes/Marker
     def __init__(self, frame_id="base", topic_name="visualization_marker"):
 
         self._pub = rospy.Publisher(topic_name, Marker, queue_size=400)
@@ -56,7 +57,30 @@ class MarkerDrawer(object):
         if lifetime > 0:
             marker.lifetime = rospy.Duration(lifetime)
         self._pub.publish(marker)
-
+        
+    def draw_links(self, id, list_xyz, size=0.1, lifetime=-1, color='r'):
+        marker = copy.deepcopy(self._MARKER_TEMPLATE)
+        marker.id = id
+        marker.type = marker.LINE_STRIP
+        marker.header.stamp = rospy.Time.now()
+        marker.points = [Point(*xyz) for xyz in list_xyz]
+        marker.scale.x = size
+        marker.color = COLORS[color]
+        if lifetime > 0:
+            marker.lifetime = rospy.Duration(lifetime)
+        self._pub.publish(marker)
+        
+    def draw_dots(self, id, list_xyz, size=0.1, lifetime=-1, color='r'):
+        marker = copy.deepcopy(self._MARKER_TEMPLATE)
+        marker.id = id
+        marker.type = marker.SPHERE_LIST
+        marker.header.stamp = rospy.Time.now()
+        marker.points = [Point(*xyz) for xyz in list_xyz]
+        marker.scale.x = size
+        marker.color = COLORS[color]
+        if lifetime > 0:
+            marker.lifetime = rospy.Duration(lifetime)
+        self._pub.publish(marker)
     def delete_marker(self, id):
         marker = copy.deepcopy(self._MARKER_TEMPLATE)
         marker.id = id
