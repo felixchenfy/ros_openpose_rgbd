@@ -161,7 +161,7 @@ def test_openpose_on_images():
     def parse_args():
         parser = argparse.ArgumentParser()
         parser.add_argument("--image_dir",
-                            default=ROOT+"data/image1/color/",
+                            default=ROOT+"data/image_i1/color/",
                             help="Process a directory of images. "
                             "Read all standard formats (jpg, png, bmp, etc.).")
         args = parser.parse_known_args()

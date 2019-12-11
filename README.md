@@ -1,16 +1,42 @@
+ros_openpose_rgbd
+==================================
+Combine Openpose 2D detection results and depth image to obtain 3D joint positions, and draw in ROS rviz.
 
+**Demo** (Body only; 12 fps; Kind of good.)
+![](doc/video_demo/demo_no_hand.gif)
 
-# Install
+**Demo** (Body+hand; 3 fps; Inaccurate hands' 3D positions.)
+![](doc/video_demo/demo_with_hand.gif)
 
-First, install [openpose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) by following its very detailed and very long official tutorial.  
-Please also compile its python code. Either python2 or python3 is fine. Tutorial is [here](https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/modules/python_module.md).
+**Contents**:
+TODO
+
+# 1. Introduction
+
+**Algorithm:** The workflow is:
+1. Detect **2D human joints** from *color image* by Openpose.
+2. Compute joints' **3D positions** by getting the depth from *depth image*. 
+4. Visualize them in rviz by ROS markers.
+
+**Code:** The main script is [detect_and_draw_joints.py](detect_and_draw_joints.py), which imports two library scripts [lib_openpose_detector.py](lib_openpose_detector.py) and [lib_draw_3d_joints.py](lib_draw_3d_joints.py).
+
+# 2. Installation
+
+**Environment:**    
+Ubuntu 18.04, ROS melodic, python2.
+
+**Openpose**:
+First, install [Openpose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) by following its very detailed and very long official tutorial.  
+Please also compile its code into Python2 libraries. Tutorial is [here](https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/modules/python_module.md).
 
 The major (not complete) steps are listed below:
 ``` 
 cd ~/githubs
 git clone https://github.com/CMU-Perceptual-Computing-Lab/openpose; cd openpose
 mkdir -p build; cd build
-cmake -DBUILD_PYTHON=ON .. # Compile to create python libraries.
+cmake  -DBUILD_PYTHON=ON \
+    -DPYTHON_EXECUTABLE=/usr/bin/python2.7 \
+    -DPYTHON_LIBRARY=/usr/lib/x86_64-linux-gnu/libpython2.7m.so ..
 make -j11
 sudo make install # Install c++/python libraries to `/usr/local/python`.
 ```
@@ -22,8 +48,8 @@ echo "'${OPENPOSE_HOME}' should be the folder of your openpose."
 
 Make sure you can run its example 
 ```
-cd ${OPENPOSE_HOME} /build/examples/tutorial_api_python
-python3 04_keypoints_from_images.py # Both python2 and python3 are fine. This is not running in ROS. 
+cd ${OPENPOSE_HOME}/build/examples/tutorial_api_python
+python 04_keypoints_from_images.py
 ```
 
 Set the environment variable `OPENPOSE_PYTHONPATH` as the installation directory of openpose python libraries. It's probably `/usr/local/python`.
@@ -31,16 +57,16 @@ Set the environment variable `OPENPOSE_PYTHONPATH` as the installation directory
 export OPENPOSE_PYTHONPATH="/usr/local/python"
 ```
 
-# Usage
+# 3. Usage
 
-## Unit test
+## 3.1. Unittest
 
 
-## lib_openpose_detector.py
+## 3.1.1. lib_openpose_detector.py
 ```
 python lib_openpose_detector.py
 ```
-The test case reads images from [data/image1/](data/image1/) and ouputs the results to [output/](output/).
+The test case reads images from [data/image_i1/](data/image_i1/) and ouputs the results to [output/](output/).
 
 
 ## Test on realsense

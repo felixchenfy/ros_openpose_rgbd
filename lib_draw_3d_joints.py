@@ -360,16 +360,16 @@ def test_visualize_3d_joints():
             and human body/hand joints.
         '''
 
-        body_joints = np.load(ROOT+"data/image1/body_joints.npy")
-        hand_joints = np.load(ROOT+"data/image1/hand_joints.npy")
+        body_joints = np.load(ROOT+"data/image_i1/body_joints.npy")
+        hand_joints = np.load(ROOT+"data/image_i1/hand_joints.npy")
 
         def read_img(p):
             return cv2.imread(p, cv2.IMREAD_UNCHANGED)
-        color = read_img(ROOT+"data/image1/color/00083.png")
-        depth = read_img(ROOT+"data/image1/depth/00083.png")
+        color = read_img(ROOT+"data/image_i1/color/00083.png")
+        depth = read_img(ROOT+"data/image_i1/depth/00083.png")
 
         camera_info = MyCameraInfo(
-            camera_info_file_path=ROOT+"data/image1/cam_params_realsense.json")
+            camera_info_file_path=ROOT+"data/image_i1/cam_params_realsense.json")
         rgbd = RgbdImage(color, depth,
                          camera_info,
                          camera_pose=cam_pose,
