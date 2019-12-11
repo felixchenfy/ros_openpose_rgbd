@@ -48,11 +48,11 @@ def parse_command_line_arguments():
     parser.add_argument("-d", "--base_folder",
                         default=ROOT)
     parser.add_argument("-e", "--folder_color",
-                        default="data/images40/color/")
+                        default="data/images_n40/color/")
     parser.add_argument("-f", "--folder_depth",
-                        default="data/images40/depth/")
+                        default="data/images_n40/depth/")
     parser.add_argument("-g", "--camera_info_file",
-                        default="data/images40/cam_params_realsense.json")
+                        default="data/images_n40/cam_params_realsense.json")
 
     # -- Get args.
     inputs = rospy.myargv()[1:]
@@ -60,7 +60,7 @@ def parse_command_line_arguments():
     args = parser.parse_args(inputs)
 
     # -- Deal with relative path.
-    b = args.base_folder
+    b = args.base_folder + "/"
     args.folder_color = b + args.folder_color
     args.folder_depth = b + args.folder_depth
     args.camera_info_file = b + args.camera_info_file
@@ -212,6 +212,11 @@ def main(args):
         # Keep update camera pose for rviz visualization.
         cam_pose_pub.publish()
         print("Total time = {} seconds.".format(time.time()-t0))
+
+        # -- Reset data.
+        if args.data_source == "disk" and ith_image == total_images:
+            data_reader = DataReader_DISK(args)
+            ith_image = 0
 
     # -- Clean up.
     for human in humans:
