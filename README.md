@@ -68,4 +68,11 @@ detect_imgs_from_disk.py  # from local disk
 
 I'm using `Pose Output Format (COCO)` and `Hand Output Format` from this [page](https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/output.md).
 
+# Speed
+
+Running speed of `detect_and_draw_joints.py`:
+* Settings: RTX 2070; Image resize to 320x240.
+* Results:
+    * body + hand: 3 fps.
+    * Only body: 12 fps.
 

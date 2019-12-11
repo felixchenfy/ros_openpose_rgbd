@@ -4,6 +4,7 @@ import cv2
 import rospy
 import argparse
 import glob
+import time
 
 from lib_draw_3d_joints import Human, set_default_params
 from lib_openpose_detector import OpenposeDetector
@@ -26,6 +27,8 @@ def parse_command_line_arguments():
     parser.add_argument("-s", "--data_source",
                         default="disk",
                         choices=["rostopic", "disk"])
+    parser.add_argument("-z", "--detect_hand", type=Bool,
+                        default=False)
     parser.add_argument("-u", "--depth_unit", type=float,
                         default="0.001",
                         help="Depth is (pixel_value * depth_unit) meters.")
@@ -61,6 +64,17 @@ def parse_command_line_arguments():
 
     # -- Return
     return args
+
+
+def Bool(v):
+    ''' A bool class for argparser '''
+    # TODO: Add a reference
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
 class DataReader_DISK(object):
@@ -105,18 +119,21 @@ def main(args):
     total_images = data_reader.size()
 
     # -- Detector.
-    detector = OpenposeDetector()
+    detector = OpenposeDetector(
+        {"hand": args.detect_hand != 0}
+    )
 
     # -- Settings.
     cam_pose, cam_pose_pub = set_default_params()
 
     # -- Loop: read, detect, draw.
-    rate = rospy.Rate(1.0)
     prev_humans = []
     while not rospy.is_shutdown() and ith_image < total_images:
+        t0 = time.time()
 
         # -- Read data
-        print("Reading {}/{}th color/depth images...".format(
+        print("============================================")
+        rospy.loginfo("Reading {}/{}th color/depth images...".format(
             ith_image+1, total_images))
         rgbd = data_reader.read_next_data()
         rgbd.set_camera_pose(cam_pose)
@@ -143,12 +160,15 @@ def main(args):
                 i+1, N_people, human._id))
             humans.append(human)
 
-
         # -- Loop.
         prev_humans = humans
-        rate.sleep()
         # Keep update camera pose for rviz visualization.
         cam_pose_pub.publish()
+        print("Total time = {} seconds.".format(time.time()-t0))
+
+    # -- Clean up.
+    for human in humans:
+        human.delete_rviz()
 
 
 if __name__ == '__main__':

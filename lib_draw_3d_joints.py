@@ -207,11 +207,16 @@ class Human(object):
         id_l_hand = self._id * GAP + 30
         id_r_hand = self._id * GAP + 60
         self._body = Body(id_body, rgbd, body_joints)
-        self._left_hand = Hand(id_l_hand, rgbd, hand_joints[0])
-        self._right_hand = Hand(id_r_hand, rgbd, hand_joints[1])
+        if hand_joints is not None:
+            self._left_hand = Hand(id_l_hand, rgbd, hand_joints[0])
+            self._right_hand = Hand(id_r_hand, rgbd, hand_joints[1])
 
         # Store all the above into a list.
-        self._parts = [self._body, self._left_hand, self._right_hand]
+        self._parts = [self._body]
+        if hand_joints is not None:
+            self._parts.extend([self._left_hand, self._right_hand])
+
+        return
 
     def draw_rviz(self):
         for part in self._parts:

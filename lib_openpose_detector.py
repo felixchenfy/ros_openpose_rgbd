@@ -26,8 +26,10 @@ MODEL_PATH = OPENPOSE_HOME + "models/"
 
 
 class OpenposeDetector(object):
-    def __init__(self):
-        self._params = self._set_openpose_params()
+    def __init__(self, keys_params={}):
+        self._params = self.set_default_params()
+        self.set_params(keys_params=keys_params)
+        assert(self._params["face"] == False)  # I haven't added this.
         self._opWrapper = op.WrapperPython()
         self._opWrapper.configure(self._params)
         self._opWrapper.start()  # Start Openpose.
@@ -59,40 +61,65 @@ class OpenposeDetector(object):
         # print("Hand keypoints: \n" + str(datum.handKeypoints))
         if is_return_joints:
             body_joints = np.array(datum.poseKeypoints)
-            hand_joints = np.array(datum.handKeypoints)
-            np.swapaxes(hand_joints, 0, 1) # reshape to [P, 2, M, 3]
+            if self._params["hand"] == False:
+                number_of_people = body_joints.shape[0]
+                hand_joints = [None] * number_of_people
+            else:
+                hand_joints = np.array(datum.handKeypoints)
+                np.swapaxes(hand_joints, 0, 1)  # reshape to [P, 2, M, 3]
             return body_joints, hand_joints
         else:
             return datum
 
-    def save_joints_positions(self, datum, pose_filename, hand_filename):
-        ''' Save body and hand joints to two binary files. '''
+    def save_joints_positions(self, datum, pose_filename, hand_filename=None):
+        ''' Save body and hand joints to two binary files. 
+        For the data type of `datum`, see `def detect`.
+        '''
 
         def save_binary(filename, data):
-            np.save(filename, np.array(data))
+            if data is not None:
+                np.save(filename, np.array(data))
 
         def save_txt(filename, data):
-            np.savetxt(filename, np.array(data), delimiter=",")
+            if data is not None:
+                np.savetxt(filename, np.array(data), delimiter=",")
 
         save_binary(pose_filename, datum.poseKeypoints)
         save_binary(hand_filename, datum.handKeypoints)
+        print(datum.handKeypoints)
 
         # To load the data, use:
         # bodies_joints = np.load(pose_filename)
         # hands_joints = np.load(hand_filename)
 
-    def _set_openpose_params(self, command_line_args=[]):
-        ''' Custom openpose params.
-        (Refer to $OPENPOSE_HOME/include/openpose/flags.hpp for more parameters.)
-        '''
+    def set_default_params(self):
+        # Refer to $OPENPOSE_HOME/include/openpose/flags.hpp for more parameters.
         params = dict()
         params["model_folder"] = MODEL_PATH
         params["face"] = False  # I haven't done this.
         params["hand"] = True
         params["net_resolution"] = "320x240"  # e.g.: "240x160"
+        # params["net_resolution"] = "640x480"  # e.g.: "240x160"
         params["model_pose"] = "COCO"  # Please use "COCO".
+        return params
 
-        # Add others settings from command line arguments to `params`
+    def set_params(self,
+                   command_line_args=[],
+                   keys_params={}):
+        ''' Set openpose params in place.
+        Arguments:
+            command_line_args {list}:
+                e.g.: ["--hand", False, "--model_pose", "COCO"]
+            keys_params {dict}:
+                e.g.: {"hand": False, "model_pose": "COCO"}
+        '''
+        if not isinstance(command_line_args, list):
+            raise RuntimeError("`command_line_args` should be list!")
+        if not isinstance(keys_params, dict):
+            raise RuntimeError("`keys_params` should be dict!")
+
+        params = self._params
+
         if command_line_args:
             args = command_line_args
             for i in range(0, len(args[1])):
@@ -109,6 +136,11 @@ class OpenposeDetector(object):
                     key = curr_item.replace('-', '')
                     if key not in params:
                         params[key] = next_item
+
+        if keys_params:
+            for key, param in keys_params.iteritems():
+                params[key] = param
+
         return params
 
 
@@ -129,7 +161,7 @@ def test_openpose_on_images():
     def parse_args():
         parser = argparse.ArgumentParser()
         parser.add_argument("--image_dir",
-                            default=ROOT+"data/image1/",
+                            default=ROOT+"data/image1/color/",
                             help="Process a directory of images. "
                             "Read all standard formats (jpg, png, bmp, etc.).")
         args = parser.parse_known_args()
@@ -137,8 +169,12 @@ def test_openpose_on_images():
 
     args = parse_args()
 
-    # -- Setup variables.
-    detector = OpenposeDetector()
+    # -- Setup detector.
+    detector = OpenposeDetector(
+        # keys_params={"hand": False}
+    )
+
+    # -- Output folder.
     makedir(DST_FOLDER)
 
     # -- Read images and detect.
@@ -165,7 +201,7 @@ def test_openpose_on_images():
 
         image_with_skeletons_on_it = datum.cvOutputData
         cv2.imwrite(filename_image, image_with_skeletons_on_it)
-        print("  Write results to: " + s)
+        print("  Write results to: " + s + "***")
 
         # Show.
         cv2.imshow("Detection Result", image_with_skeletons_on_it)
