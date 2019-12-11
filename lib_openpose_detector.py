@@ -32,7 +32,7 @@ class OpenposeDetector(object):
         self._opWrapper.configure(self._params)
         self._opWrapper.start()  # Start Openpose.
 
-    def detect(self, color_image):
+    def detect(self, color_image, is_return_joints=False):
         '''
         Arguments:
             color_image {image}: shape=[rows, cols, 3]; type=np.uint8.
@@ -57,7 +57,12 @@ class OpenposeDetector(object):
         self._opWrapper.emplaceAndPop([datum])
         # print("Body keypoints: \n" + str(datum.poseKeypoints))
         # print("Hand keypoints: \n" + str(datum.handKeypoints))
-        return datum
+        if is_return_joints:
+            body_joints = np.array(datum.poseKeypoints)
+            hand_joints = np.array(datum.handKeypoints)
+            return body_joints, hand_joints
+        else:
+            return datum
 
     def save_joints_positions(self, datum, pose_filename, hand_filename):
         ''' Save body and hand joints to two binary files. '''

@@ -135,11 +135,19 @@ class RvizMarker(object):
 
     @staticmethod
     def delete_marker(id):
+        ''' WARNING: This works in this script's test case,
+        but sometimes doesn't work in my main program.
+        '''
         marker = copy.deepcopy(RvizMarker._MARKER_TEMPLATE)
         marker.id = id
         marker.action = marker.DELETE
         RvizMarker._pub.publish(marker)
+        # rospy.loginfo("Delete marker with id = {}".format(id))
 
+    @staticmethod
+    def deleteAllMarkers():
+        RvizMarker._pub.deleteAllMarkers()
+                         
     @staticmethod
     def _check_initialization():
         if (RvizMarker._MARKER_TEMPLATE is None) or \

@@ -23,7 +23,7 @@ if True:  # Add project root
     import os
     ROOT = os.path.dirname(os.path.abspath(__file__))+'/'
 
-    from utils.lib_rgbd import RgbdImage, CameraInfo
+    from utils.lib_rgbd import RgbdImage, MyCameraInfo
     from utils.lib_rviz_marker import RvizMarker
 
 ''' ------------------------------- DEBUG SETTINGS ------------------------------- '''
@@ -62,13 +62,13 @@ class AbstractPart(object):
         curr_id = self._id
         for i, link in enumerate(self._links):
             RvizMarker.draw_links(curr_id, link)
-            curr_id += 1
             self._marker_ids.append(curr_id)
+            curr_id += 1
         if IS_DRAW_DOTS:
             for i, link in enumerate(self._links):
                 RvizMarker.draw_dots(curr_id, link)
-                curr_id += 1
                 self._marker_ids.append(curr_id)
+                curr_id += 1
 
     def delete_rviz(self):
         for markder_id in self._marker_ids:
@@ -340,8 +340,8 @@ def test_visualize_3d_joints():
         color = read_img(ROOT+"data/image1/color/00083.png")
         depth = read_img(ROOT+"data/image1/depth/00083.png")
 
-        camera_info = CameraInfo(
-            ROOT+"data/image1/cam_params_realsense.json")
+        camera_info = MyCameraInfo(
+            camera_info_file_path=ROOT+"data/image1/cam_params_realsense.json")
         rgbd = RgbdImage(color, depth,
                          camera_info,
                          camera_pose=cam_pose,
@@ -358,6 +358,10 @@ def test_visualize_3d_joints():
         rgbd, body_joints, hand_joints = read_next_data()
         N_people = len(body_joints)
 
+        for human in prev_humans:
+            # If I put delete after drawing new markders,
+            # The delete doesn't work. I don't know why.
+            human.delete_rviz()
         humans = []
         for i in range(N_people):
             human = Human(rgbd, body_joints[i, :, :],
@@ -366,12 +370,17 @@ def test_visualize_3d_joints():
             rospy.loginfo("Drawing {}th person on rviz.".format(human._id))
             humans.append(human)
 
-        for human in prev_humans:
-            human.delete_rviz()
         prev_humans = humans
 
         cam_pose_pub.publish()
         rate.sleep()
+
+    # -- Delete marker (Which doens't work. I don't know why.)
+    for human in prev_humans:
+        human.delete_rviz()
+    for human in humans:
+        human.delete_rviz()
+    rospy.sleep(2.0)
 
 
 if __name__ == '__main__':

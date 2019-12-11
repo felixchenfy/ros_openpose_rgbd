@@ -18,7 +18,7 @@ Subscriber:
 import rospy
 from cv_bridge import CvBridge, CvBridgeError
 
-from sensor_msgs.msg import Image, CameraInfo
+from sensor_msgs.msg import Image, CameraInfo  # This is ROS camera info.
 from std_msgs.msg import Header
 
 import cv2
@@ -113,7 +113,7 @@ class CameraInfoPublisher():
         self._pub = rospy.Publisher(topic_name, CameraInfo, queue_size=5)
 
         # Create default camera info:
-        camera_info = CameraInfo()
+        camera_info = CameraInfo()  # This is ROS camera info. Not mine.
         camera_info.distortion_model = "plumb_bob"
         camera_info.R = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
         camera_info.D = [0.0, 0.0, 0.0, 0.0, 0.0]

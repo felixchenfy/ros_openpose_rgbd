@@ -12,7 +12,7 @@ class RgbdImage(object):
             color {image}.
         Arguments:
             depth {image}: depth image of type np.uint16.
-            camera_info {CameraInfo}:
+            camera_info {MyCameraInfo}:
             camera_pose {2d matrix}: 4x4 transformation matrix.
             camera_pose {2d matrix}: 4x4 transformation matrix.
         '''
@@ -50,11 +50,21 @@ class RgbdImage(object):
     def set_camera_pose(self, camera_pose):
         self._camera_pose = camera_pose
 
+    def color_image(self):
+        return self._color
 
-class CameraInfo():
 
-    def __init__(self, camera_info_json_file_path):
-        data = read_json_file(camera_info_json_file_path)
+class MyCameraInfo():
+
+    def __init__(self,
+                 camera_info_file_path=None,
+                 ros_camera_info=None):
+        if camera_info_file_path is not None:
+            data = read_json_file(camera_info_file_path)
+        elif ros_camera_info is not None:
+            data = self._from_ros_camera_info(ros_camera_info)
+        else:
+            raise RuntimeError("Invalid input for MyMyCameraInfo().")
         self._width = int(data["width"])  # int.
         self._height = int(data["height"])  # int.
         self._intrinsic_matrix = data["intrinsic_matrix"]  # list of float.
@@ -104,6 +114,14 @@ class CameraInfo():
         row, col = self._height, self._width
         fx, fy, cx, cy = im[0], im[4], im[6], im[7]
         return row, col, fx, fy, cx, cy
+
+    def _from_ros_camera_info(self, ros_camera_info):
+        data = {
+            "width": ros_camera_info.width,
+            "height": ros_camera_info.height,
+            "intrinsic_matrix": ros_camera_info.K,
+        }
+        return data
 
 
 def read_json_file(file_path):
