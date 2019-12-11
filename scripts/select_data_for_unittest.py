@@ -30,7 +30,8 @@ COLUMN_RATIO = 0.55
 
 def read_ith_image(i):
     color = cv2.imread(SRC_FOLDER + "color_{:05d}.png".format(i))
-    depth = cv2.imread(SRC_FOLDER + "depth_{:05d}.png".format(i))
+    depth = cv2.imread(
+        SRC_FOLDER + "depth_{:05d}.png".format(i), cv2.IMREAD_UNCHANGED)
     return color, depth
 
 
@@ -38,7 +39,10 @@ def merge_img(I1, I2, column_ratio=0.5):
     column = I1.shape[1]
     assert(I1.shape == I2.shape)
     c = int(column*column_ratio)
-    I12 = np.hstack((I1[:, :c, :], I2[:, c:, :]))
+    if len(I1.shape) == 2:
+        I12 = np.hstack((I1[:, :c], I2[:, c:]))
+    else:
+        I12 = np.hstack((I1[:, :c, :], I2[:, c:, :]))
     return I12
 
 
@@ -58,8 +62,8 @@ if __name__ == '__main__':
 
     for i in range(L):
         print("Processing the {}/{}th image".format(i+1, L))
-        rc, rd = read_ith_image(RIGHT_SIDE_INDICES[0] + i)
         lc, ld = read_ith_image(LEFT_SIDE_INDICES[0] + i)
+        rc, rd = read_ith_image(RIGHT_SIDE_INDICES[0] + i)
         color = merge_img(lc, rc, COLUMN_RATIO)
         depth = merge_img(ld, rd, COLUMN_RATIO)
 
@@ -68,5 +72,8 @@ if __name__ == '__main__':
         fdepth = DST_FOLDER_DEPTH+filename
         cv2.imwrite(fcolor, color)
         cv2.imwrite(fdepth, depth)
+        if 0:
+            show([color, depth], figsize=(10, 5))
+            show([lc, rc], figsize=(10, 5))
         print("  Write color image to: " + fcolor)
         print("  Write depth image to: " + fdepth)

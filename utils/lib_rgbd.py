@@ -3,18 +3,25 @@ import simplejson
 
 
 class RgbdImage(object):
-    def __init__(self, depth, camera_info, depth_unit=0.001, color=None):
+    def __init__(self, color, depth,
+                 camera_info,
+                 camera_pose=np.identity(4),  # in world frame.
+                 depth_unit=0.001,
+                 ):
         '''
+            color {image}.
         Arguments:
             depth {image}: depth image of type np.uint16.
             camera_info {CameraInfo}:
-            depth_unit {float}: depth[i,j]*depth_unit is it's real depth in meters.
-            color {image}.
+            camera_pose {2d matrix}: 4x4 transformation matrix.
+            camera_pose {2d matrix}: 4x4 transformation matrix.
         '''
+        assert(len(depth.shape) == 2 and len(color.shape) == 3)
         self._depth = depth.astype(np.float32) * depth_unit
         self._camera_info = camera_info
         self._color = color
         self._row, self._col, self._fx, self._fy, self._cx, self._cy = camera_info.get_cam_params()
+        self._camera_pose = camera_pose
 
     def get_3d_pos(self, x, y):
         '''
@@ -36,6 +43,12 @@ class RgbdImage(object):
     def _xy_to_row_col(self, x, y):
         # row, col = round(self._row * y), round(self._col * x)
         return int(round(y)), int(round(x))
+
+    def camera_pose(self):
+        return self._camera_pose
+
+    def set_camera_pose(self, camera_pose):
+        self._camera_pose = camera_pose
 
 
 class CameraInfo():
