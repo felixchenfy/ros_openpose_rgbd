@@ -106,7 +106,27 @@ class RvizMarker(object):
         RvizMarker._pub.publish(marker)
 
     @staticmethod
-    def draw_links(id, list_xyz):
+    def draw_links(id, list_xyz):        
+        ''' If list_xyz=[p0, p1, p2, p3],
+        then the links are [(p0, p1), (p2, p3)].
+        '''
+        marker = copy.deepcopy(RvizMarker._MARKER_TEMPLATE)
+        size, color, lifetime = RvizMarker._V_LINK.get_params()
+        marker.id = id
+        marker.type = marker.LINE_LIST
+        marker.header.stamp = rospy.Time.now()
+        marker.points = [Point(*xyz) for xyz in list_xyz]
+        marker.scale.x = size
+        marker.color = COLORS[color]
+        if lifetime > 0:
+            marker.lifetime = rospy.Duration(lifetime)
+        RvizMarker._pub.publish(marker)
+
+    @staticmethod
+    def draw_single_strand_links(id, list_xyz):
+        ''' If list_xyz=[p0, p1, p2, p3],
+        then the links are [(p0, p1), (p1, p2), (p2, p3)].
+        '''
         marker = copy.deepcopy(RvizMarker._MARKER_TEMPLATE)
         size, color, lifetime = RvizMarker._V_LINK.get_params()
         marker.id = id

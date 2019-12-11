@@ -27,7 +27,8 @@ if True:  # Add project root
     from utils.lib_rviz_marker import RvizMarker
 
 ''' ------------------------------- DEBUG SETTINGS ------------------------------- '''
-IS_DRAW_DOTS = False  # This slows down rviz and makes it unstable.
+IS_DRAW_BY_STRANDS = False  # This is slow. Set to False.
+IS_DRAW_DOTS = False  # Not supported.
 
 ''' ------------------------------- Classes ------------------------------- '''
 
@@ -60,15 +61,20 @@ class AbstractPart(object):
 
     def draw_rviz(self):
         curr_id = self._id
-        for i, link in enumerate(self._links):
-            RvizMarker.draw_links(curr_id, link)
-            self._marker_ids.append(curr_id)
-            curr_id += 1
-        if IS_DRAW_DOTS:
+        if IS_DRAW_BY_STRANDS:
             for i, link in enumerate(self._links):
-                RvizMarker.draw_dots(curr_id, link)
+                RvizMarker.draw_links(curr_id, link)
                 self._marker_ids.append(curr_id)
                 curr_id += 1
+            if IS_DRAW_DOTS:
+                for i, link in enumerate(self._links):
+                    RvizMarker.draw_dots(curr_id, link)
+                    self._marker_ids.append(curr_id)
+                    curr_id += 1
+        else:
+            RvizMarker.draw_links(curr_id, self._links)
+            self._marker_ids.append(curr_id)
+            curr_id += 1
 
     def delete_rviz(self):
         for markder_id in self._marker_ids:
@@ -83,16 +89,24 @@ class AbstractPart(object):
         '''
         joints_xyz_in_world, joints_validity = self._create_3d_joints(
             joints_2d)
-        valid_links = []
-        for joints_indices in self._LINKS_TABLE:
-            ith_link = []
-            for joint_idx in joints_indices:
-                if joints_validity[joint_idx]:
-                    ith_link.append(joints_xyz_in_world[joint_idx])
-                else:
-                    break
-            if len(ith_link) >= 2:
-                valid_links.append(ith_link)
+        if IS_DRAW_BY_STRANDS:
+            # Use `RvizMarker.draw_single_strand_links`
+            valid_links = []
+            for joints_indices in self._LINKS_TABLE_CHAIN:
+                ith_link = []
+                for joint_idx in joints_indices:
+                    if joints_validity[joint_idx]:
+                        ith_link.append(joints_xyz_in_world[joint_idx])
+                    else:
+                        break
+                if len(ith_link) >= 2:
+                    valid_links.append(ith_link)
+        else:
+            # Use `RvizMarker.draw_links`
+            valid_links = [joints_xyz_in_world[joint_idx]
+                           for joint_i_joint_j in self._LINKS_TABLE
+                           for joint_idx in joint_i_joint_j
+                           ]
         return valid_links
 
     def _create_3d_joints(self, joints_2d):
@@ -122,7 +136,7 @@ class AbstractPart(object):
 
 class Body(AbstractPart):
     _N_LINKS = 18
-    _LINKS_TABLE = [
+    _LINKS_TABLE_CHAIN = [
         [0, 1, 2, 3, 4],
         [1, 5, 6, 7],
         [1, 8, 9, 10],
@@ -130,7 +144,7 @@ class Body(AbstractPart):
         [0, 14, 16],
         [0, 15, 17],
     ]
-    _LINKS_TABLE_SINGLE = [
+    _LINKS_TABLE = [
         [0, 1],
         [1, 2],
         [2, 3],
@@ -156,14 +170,14 @@ class Body(AbstractPart):
 
 class Hand(AbstractPart):
     _N_LINKS = 21
-    _LINKS_TABLE = [
+    _LINKS_TABLE_CHAIN = [
         [0, 1, 2, 3, 4],
         [0, 5, 6, 7, 8],
         [0, 9, 10, 11, 12],
         [0, 13, 14, 15, 16],
         [0, 17, 18, 19, 20]
     ]
-    _LINKS_TABLE_SINGLE = [
+    _LINKS_TABLE = [
         [0, 1],
         [1, 2],
         [2, 3],
