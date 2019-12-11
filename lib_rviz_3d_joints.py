@@ -98,9 +98,14 @@ class AbstractPart(object):
     def _create_3d_joints(self, joints_2d):
         joints_xyz_in_camera = [self._rgbd.get_3d_pos(joint_2d_x, joint_2d_y)
                                 for joint_2d_x, joint_2d_y, confidence in joints_2d]  # Nx3
-        joints_xyz_in_world = self._rgbd.camera_pose().dot(np.hstack(
-            (np.array(joints_xyz_in_camera),
-             np.ones((len(joints_2d), 1), np.float64))).T).T[:, 0:3]  # Nx3
+
+        def change_joints_coordinate_to_world():
+            T_camera = self._rgbd.camera_pose()  # 4x4
+            P_joints = np.hstack(  # Nx3 --> Nx4
+                (np.array(joints_xyz_in_camera),
+                 np.ones((len(joints_2d), 1), np.float64))).T
+            return (T_camera.dot(P_joints)).T[:, 0:3]  # Nx3
+        joints_xyz_in_world = change_joints_coordinate_to_world()
 
         EPS = 0.0001
 
@@ -285,7 +290,7 @@ def set_default_params():
         [0.,  -1., 0., 1.],
         [0.,  0., 0., 1.],
     ])
-    
+
     # # To make the skeleton allign with point cloud,
     # # let's make the camera pose at origin.
     # # cam_pose = np.identity(4)
@@ -323,8 +328,8 @@ def test_visualize_3d_joints():
 
     def read_next_data():
         ''' Read color/depth image,
-            camera info, 
-            and human body/hand joints. 
+            camera info,
+            and human body/hand joints.
         '''
 
         body_joints = np.load(ROOT+"data/one_image/body_joints.npy")
