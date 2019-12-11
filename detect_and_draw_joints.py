@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 import numpy as np
 import cv2
@@ -15,6 +17,7 @@ if True:  # Add project root
     ROOT = os.path.dirname(os.path.abspath(__file__))+'/'
     sys.path.append(ROOT)
     from utils.lib_rgbd import RgbdImage, MyCameraInfo
+    from utils.lib_ros_rgbd_pub_and_sub import ColorImageSubscriber, DepthImageSubscriber, CameraInfoSubscriber
 
 
 def parse_command_line_arguments():
@@ -88,7 +91,7 @@ class DataReader_DISK(object):
         self._cnt_imgs = 0
         self._total_images = len(self._fcolors)
 
-    def size(self):
+    def total_images(self):
         return self._total_images
 
     def read_next_data(self):
@@ -104,8 +107,52 @@ class DataReader_DISK(object):
 
 
 class DataReader_ROS(object):
-    def __init__(self):
-        pass
+    def __init__(self, args):
+        self._sub_c = ColorImageSubscriber(args.ros_topic_color)
+        self._sub_d = DepthImageSubscriber(args.ros_topic_depth)
+        self._sub_i = CameraInfoSubscriber(args.ros_topic_camera_info)
+        self._depth_unit = args.depth_unit
+        self._camera_info = None
+        self._cnt_imgs = 0
+
+    def _get_camera_info(self):
+        '''
+        Since camera info usually doesn't change,
+        we read it from cache after it's initialized.
+        '''
+        if self._camera_info is None:
+            while (not self._sub_i.has_camera_info()) and (not rospy.is_shutdown):
+                rospy.sleep(0.001)
+            if self._sub_i.has_camera_info:
+                self._camera_info = MyCameraInfo(
+                    ros_camera_info=self._sub_i.get_camera_info())
+        return self._camera_info
+
+    def total_images(self):
+        ''' Set a large number here. '''
+        return 9999
+
+    def _read_depth(self):
+        while not self._sub_d.has_image() and (not rospy.is_shutdown()):
+            rospy.sleep(0.001)
+        depth = self._sub_d.get_image()
+        return depth
+
+    def _read_color(self):
+        while not self._sub_c.has_image() and (not rospy.is_shutdown()):
+            rospy.sleep(0.001)
+        color = self._sub_c.get_image()
+        return color
+
+    def read_next_data(self):
+        depth = self._read_depth()
+        color = self._read_color()
+        camera_info = self._get_camera_info()
+        self._cnt_imgs += 1
+        rgbd = RgbdImage(color, depth,
+                         camera_info,
+                         depth_unit=self._depth_unit)
+        return rgbd
 
 
 def main(args):
@@ -116,7 +163,7 @@ def main(args):
     else:
         data_reader = DataReader_ROS(args)
     ith_image = 0
-    total_images = data_reader.size()
+    total_images = data_reader.total_images()
 
     # -- Detector.
     detector = OpenposeDetector(

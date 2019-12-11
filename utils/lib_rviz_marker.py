@@ -148,6 +148,8 @@ class RvizMarker(object):
         marker.header.stamp = rospy.Time.now()
         marker.points = [Point(*xyz) for xyz in list_xyz]
         marker.scale.x = size
+        marker.scale.y = size
+        marker.scale.z = size
         marker.color = COLORS[color]
         if lifetime > 0:
             marker.lifetime = rospy.Duration(lifetime)

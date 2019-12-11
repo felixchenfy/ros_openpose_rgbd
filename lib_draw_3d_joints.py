@@ -28,7 +28,7 @@ if True:  # Add project root
 
 ''' ------------------------------- DEBUG SETTINGS ------------------------------- '''
 IS_DRAW_BY_STRANDS = False  # This is slow. Set to False.
-IS_DRAW_DOTS = False  # Not supported.
+IS_DRAW_DOTS = True
 
 ''' ------------------------------- Classes ------------------------------- '''
 
@@ -75,6 +75,13 @@ class AbstractPart(object):
             RvizMarker.draw_links(curr_id, self._links)
             self._marker_ids.append(curr_id)
             curr_id += 1
+            if IS_DRAW_DOTS and len(self._links) > 0:
+                joints = [self._links[0]]
+                for i in range(2, len(self._links)):
+                    joints.append(self._links[i])
+                RvizMarker.draw_dots(curr_id, joints)
+                self._marker_ids.append(curr_id)
+                curr_id += 1
 
     def delete_rviz(self):
         for markder_id in self._marker_ids:
@@ -104,8 +111,9 @@ class AbstractPart(object):
         else:
             # Use `RvizMarker.draw_links`
             valid_links = [joints_xyz_in_world[joint_idx]
-                           for joint_i_joint_j in self._LINKS_TABLE
-                           for joint_idx in joint_i_joint_j
+                           for ij in self._LINKS_TABLE
+                           if joints_validity[ij[0]] and joints_validity[ij[1]]
+                           for joint_idx in ij
                            ]
         return valid_links
 
@@ -242,6 +250,7 @@ class Human(object):
         if self._has_displayed:
             for part in self._parts:
                 part.delete_rviz()
+                rospy.sleep(0.0001)
         self._has_displayed = False
 
     # def __del__(self):
@@ -323,7 +332,7 @@ def set_default_params():
 
     # Rviz drawer.
     RvizMarker.init(frame_id=base_frame, topic_name="visualization_marker")
-    RvizMarker.set_dot(size=0.1, color='r')
+    RvizMarker.set_dot(size=0.03, color='r')
     RvizMarker.set_link(size=0.01, color='g')
 
     # Return.

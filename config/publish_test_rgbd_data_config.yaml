@@ -1,20 +1,20 @@
 # Configuration for `pub_rgbd_and_cloud.py`.
 
 ros_topic_namespace: ""
-publish_rate: 2.0 # How many data to publish per second.
+publish_rate: 1.0 # How many data to publish per second.
 is_loop_forever: True # After publishing all images, loop back to the 1st one.
 frame_id: "camera_link" # Name of the camera frame.
 
 color:
   is_publish: True
   # folder: "data/image1/color"
-  folder: "data/test_images/color"
+  folder: "data/images40/color"
   ros_topic: "camera/color/image_raw"
 
 depth:
   is_publish: True
   # folder: "data/image1/depth"
-  folder: "data/test_images/depth"
+  folder: "data/images40/depth"
   depth_unit: 0.001 # If depth[i,j]=D, then this pixel's depth is (depth_unit*D) meters.
   depth_trunc: 5.0 # Depth value larger than ${depth_trunc} meters gets truncated to zero.
   ros_topic: "camera/aligned_depth_to_color/image_raw"
