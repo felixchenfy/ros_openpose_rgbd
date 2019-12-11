@@ -33,13 +33,19 @@ export OPENPOSE_PYTHONPATH="/usr/local/python"
 
 # Usage
 
-# Unit test
+## Unit test
+
 
 ## lib_openpose_detector.py
 ```
 python lib_openpose_detector.py
 ```
-The test case reads images from [data/one_image/](data/one_image/) and ouputs the results to [output/](output/).
+The test case reads images from [data/image1/](data/image1/) and ouputs the results to [output/](output/).
+
+
+## Test on realsense
+
+**Bug:** I used a different coordinate direction than Realsense. (1) For me, I use X-Right, Y-Down, Z-Forward, which is the convention for camera. (2) For Realsense ROS package, it's X-Forward, Y-Left, Z-Up. So the point cloud published by Realsense doesn't match the 3D skeletons drawn by me.
 
 # Program structure
 

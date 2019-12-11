@@ -13,7 +13,7 @@
     https://github.com/IntelRealSense/librealsense/blob/master/doc/distribution_linux.md#installing-the-packages
     $ realsense-viewer
 
-    * Install its ROS package:  
+    * Install its ROS package and use `roslaunch`:
     https://github.com/intel-ros/realsense/#installation-instructions
 
     -->
@@ -25,16 +25,29 @@
     <include file="$(find realsense2_camera)/launch/rs_camera.launch">
         <arg name="filters" default="pointcloud" />
         <arg name="align_depth" default="true" />
+        <!-- <arg name="json_file_path" default="$(find ros_openpose_rgbd)/config/high_acc_disparity12.json"/> -->
+        <!-- <arg name="color_width" default="640" />
+        <arg name="color_height" default="480" />
+        <arg name="color_fps" default="15" />
+        <arg name="depth_width" default="640" />
+        <arg name="depth_height" default="480" />
+        <arg name="depth_fps" default="15" />
+        <arg name="enable_infra1" default="true" />
+        <arg name="enable_infra2" default="true" /> -->
     </include>
 
 
     <!--    Display Realsense's data by rviz, 
             including: color/depth/allgiend_depth/point_cloud.
     Command:
-        $ rosrun rviz rviz $(find ros_record_rgbd_images)/config/rviz_realsense_color_depth_pcl.rviz
+        $ rosrun rviz rviz $(find ros_openpose_rgbd)/config/rviz_color_depth_pcl.rviz
     -->
-    <node type="rviz" name="rviz" pkg="rviz" 
-        args="-d $(find ros_record_rgbd_images)/config/rviz_realsense_color_depth_pcl.rviz" />
+    <include file="$(find ros_openpose_rgbd)/launch/run_rviz.launch">
+    </include>
+    <node pkg="tf" type="static_transform_publisher"
+        name="set_camera_pose"
+        args="0 0 1 0.5 -0.5 0.5 -0.5 base camera_link 5"
+    />
 
     <!-- Main topics:
             color image:        /camera/color/image_raw

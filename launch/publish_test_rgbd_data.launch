@@ -25,6 +25,6 @@
     />
     
     <node type="rviz" name="rviz" pkg="rviz" 
-        args="-d $(find ros_record_rgbd_images)/config/rviz_realsense_color_depth_pcl.rviz" />
+        args="-d $(find ros_openpose_rgbd)/config/rviz_color_depth_pcl.rviz" />
 
 </launch>
