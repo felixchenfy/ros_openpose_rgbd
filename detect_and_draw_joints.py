@@ -137,8 +137,7 @@ def main(args):
         # -- Draw humans in rviz.
         humans = []
         for i in range(N_people):
-            human = Human(rgbd, body_joints[i, :, :],
-                          hand_joints[:, i, :, :])
+            human = Human(rgbd, body_joints[i], hand_joints[i])
             human.draw_rviz()
             rospy.loginfo("  Drawing {}/{}th person with id={} on rviz.".format(
                 i+1, N_people, human._id))

@@ -60,6 +60,7 @@ class OpenposeDetector(object):
         if is_return_joints:
             body_joints = np.array(datum.poseKeypoints)
             hand_joints = np.array(datum.handKeypoints)
+            np.swapaxes(hand_joints, 0, 1) # reshape to [P, 2, M, 3]
             return body_joints, hand_joints
         else:
             return datum
