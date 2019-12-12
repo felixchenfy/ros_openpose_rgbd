@@ -92,7 +92,7 @@ class RvizMarker(object):
         RvizMarker._pub.publish(marker)
 
     @staticmethod
-    def draw_link(id, xyz1, xyz2):
+    def draw_link(id, xyz1, xyz2, _color=''):
         marker = copy.deepcopy(RvizMarker._MARKER_TEMPLATE)
         size, color, lifetime = RvizMarker._V_LINK.get_params()
         marker.id = id
@@ -100,13 +100,13 @@ class RvizMarker(object):
         marker.header.stamp = rospy.Time.now()
         marker.points = [Point(*xyz1), Point(*xyz2)]
         marker.scale.x = size
-        marker.color = COLORS[color]
+        marker.color = COLORS[_color] if _color else COLORS[color]
         if lifetime > 0:
             marker.lifetime = rospy.Duration(lifetime)
         RvizMarker._pub.publish(marker)
 
     @staticmethod
-    def draw_links(id, list_xyz):        
+    def draw_links(id, list_xyz):
         ''' If list_xyz=[p0, p1, p2, p3],
         then the links are [(p0, p1), (p2, p3)].
         '''
@@ -166,10 +166,10 @@ class RvizMarker(object):
         RvizMarker._pub.publish(marker)
         # rospy.loginfo("Delete marker with id = {}".format(id))
 
-    @staticmethod
-    def deleteAllMarkers():
-        RvizMarker._pub.deleteAllMarkers()
-                         
+    # @staticmethod
+    # def deleteAllMarkers():
+    #     RvizMarker._pub.deleteAllMarkers()
+
     @staticmethod
     def _check_initialization():
         if (RvizMarker._MARKER_TEMPLATE is None) or \

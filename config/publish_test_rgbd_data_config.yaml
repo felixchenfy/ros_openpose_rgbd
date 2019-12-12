@@ -21,7 +21,7 @@ depth:
 
 camera_info:
   is_publish: True
-  file: "data/image_i1/cam_params_realsense.json"
+  file: "data/images_n40/cam_params_realsense.json"
   ros_topic: "camera/color/camera_info"
 
 point_cloud:
