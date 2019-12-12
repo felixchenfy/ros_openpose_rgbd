@@ -46,6 +46,11 @@ Combine Openpose 2D detection results and depth image to obtain human 3D joint p
 **Environment:**    
 Ubuntu 18.04, ROS melodic, python2.
 
+Install some common python libraries:
+```
+pip2 install --user open3d
+```
+
 **Openpose**:
 First, install [Openpose](https://github.com/CMU-Perceptual-Computing-Lab/openpose) by following its very detailed and very long official tutorial.  
 Please also compile its code into Python2 libraries. Tutorial is [here](https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/modules/python_module.md).
@@ -169,5 +174,26 @@ See the two gif at the top of this README.
 
 Besides the above problem, the Realsense also doesn't work well as expected. The measured depth value becomes inaccurate when the object is 1 meter away. I didn't do the experiment, but I feel it's about 1cm error at 1 meter, and up to 10cm when the object is several meters away (Let's say 4 meters). Also, the depth is fluctuating noticeably for distant objects, which can even be noticed from depth image.
 
-# 5. Bugs
+# 5. Others
+
+## 5.1. Helper Tools.
+
+* Draw point cloud of color/depth image.
+    ```
+    python scripts/draw_point_cloud.py -h
+    ```
+    You can directly run it and see the point cloud of [data/image_i1](data/image_i1).
+
+* Record color/depth images to disk.
+    See this github: https://github.com/felixchenfy/ros_record_rgbd_images
+
+* Publish color/depth images.
+    See this github: https://github.com/felixchenfy/ros_pub_and_sub_rgbd_and_cloud
+
+## 5.2. Noisy Realsense
+Below are two screenshots of the point cloud of [data/image_i1](data/image_i1) taken from different angles. You can see that it's very noisy.
+![](doc/noisy_realsense.png)
+When I recorded this data, I forgot to turn on Realsense's spacial and temporal filtering of the point cloud. I tried it later, but the result was still bad. 
+
+## 5.3. Bugs
 * The ROS marker `delete` function sometimes doesn't work. I can't solve it right now, maybe you need to close rviz and open it again in order to clear the ROS markers. The corresponding delete function is defined in [utils/lib_rviz_marker.py](utils/lib_rviz_marker.py) and `def delete_marker`. 

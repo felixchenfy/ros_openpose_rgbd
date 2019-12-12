@@ -178,8 +178,7 @@ def main(args):
 
     # -- Detector.
     detector = OpenposeDetector(
-        {"hand": args.detect_hand != 0}
-    )
+        {"hand": args.detect_hand})
 
     # -- Settings.
     cam_pose, cam_pose_pub = set_default_params()

@@ -80,26 +80,6 @@ Visualization Manager:
         All Enabled: false
         base:
           Value: true
-        camera_aligned_depth_to_color_frame:
-          Value: false
-        camera_aligned_depth_to_infra1_frame:
-          Value: false
-        camera_color_frame:
-          Value: false
-        camera_color_optical_frame:
-          Value: false
-        camera_depth_frame:
-          Value: false
-        camera_depth_optical_frame:
-          Value: false
-        camera_infra1_frame:
-          Value: false
-        camera_infra1_optical_frame:
-          Value: false
-        camera_infra2_frame:
-          Value: false
-        camera_infra2_optical_frame:
-          Value: false
         camera_link:
           Value: true
       Marker Scale: 1
@@ -110,22 +90,7 @@ Visualization Manager:
       Tree:
         base:
           camera_link:
-            camera_aligned_depth_to_color_frame:
-              camera_color_optical_frame:
-                {}
-            camera_aligned_depth_to_infra1_frame:
-              camera_infra1_optical_frame:
-                {}
-            camera_color_frame:
-              {}
-            camera_depth_frame:
-              camera_depth_optical_frame:
-                {}
-            camera_infra1_frame:
-              {}
-            camera_infra2_frame:
-              camera_infra2_optical_frame:
-                {}
+            {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -246,25 +211,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 5.97809362411499
+      Distance: 4.0739030838012695
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 1.0667827129364014
-        Y: -0.2033250331878662
-        Z: 0.6421324014663696
+        X: 1.2992334365844727
+        Y: -0.5871345400810242
+        Z: 0.8101662397384644
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.24520178139209747
+      Pitch: 0.4202016592025757
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.2835946083068848
+      Yaw: 3.5435969829559326
     Saved: ~
 Window Geometry:
   Camera:
