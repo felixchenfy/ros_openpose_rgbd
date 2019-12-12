@@ -1,5 +1,7 @@
 import numpy as np
 import simplejson
+import cv2
+import open3d
 
 
 class RgbdImage(object):
@@ -14,14 +16,15 @@ class RgbdImage(object):
             depth {image}: depth image of type np.uint16.
             camera_info {MyCameraInfo}:
             camera_pose {2d matrix}: 4x4 transformation matrix.
-            camera_pose {2d matrix}: 4x4 transformation matrix.
         '''
         assert(len(depth.shape) == 2 and len(color.shape) == 3)
         self._depth = depth.astype(np.float32) * depth_unit
+        self._depth_raw = depth
+        self._depth_unit = depth_unit
         self._camera_info = camera_info
         self._color = color
         self._row, self._col, self._fx, self._fy, self._cx, self._cy = camera_info.get_cam_params()
-        self._camera_pose = camera_pose
+        self._camera_info_open3d = camera_info.to_open3d_format()
 
     def get_3d_pos(self, x, y):
         '''
@@ -60,6 +63,35 @@ class RgbdImage(object):
 
     def color_image(self):
         return self._color
+
+    def create_point_cloud(
+            self,
+            depth_min=(1e-3)*0.01,
+            depth_max=4.0):
+        '''
+        Create xyz-only point cloud from depth image and camera info.
+
+        Arguments:
+            is_xyz_only {bool}: If true, create xyz cloud; Else, create xyzrgb cloud.
+            depth_min {float}: min depth. Unit: meter.
+            depth_max {float}: max depth. Unit: meter.
+        Return:
+            cloud {np.ndarray}:
+                If is_xyz_only == True: 
+                    cloud.shape=(N, 3)
+                else:
+                    cloud.shape=(N, 6) # xyz + rgb
+        '''
+        open3d_cloud = create_open3d_point_cloud_from_rgbd(
+            self._color, 
+            self._depth_raw,
+            self._camera_info_open3d,
+            self._depth_unit,
+            depth_max)
+        p = np.asarray(open3d_cloud.points)
+        # c = np.asarray(open3d_cloud.colors)
+        # cloud = np.hstack((p, c))
+        return p
 
 
 class MyCameraInfo():
@@ -136,6 +168,15 @@ class MyCameraInfo():
         }
         return data
 
+    def to_open3d_format(self):
+        ''' Convert camera info to open3d format of `class open3d.camera.PinholeCameraIntrinsic`.
+        Reference: http://www.open3d.org/docs/release/python_api/open3d.camera.PinholeCameraIntrinsic.html
+        '''
+        row, col, fx, fy, cx, cy = self.get_cam_params()
+        open3d_camera_info = open3d.camera.PinholeCameraIntrinsic(
+            col, row, fx, fy, cx, cy)
+        return open3d_camera_info
+
 
 def read_json_file(file_path):
     with open(file_path, 'r') as f:
@@ -172,3 +213,43 @@ def resize_color_and_depth(
     color = resize(color)
     depth = resize(depth)
     return color, depth
+
+
+def create_open3d_point_cloud_from_rgbd(
+        color_img, depth_img,
+        cam_info,
+        depth_unit=0.001,
+        depth_trunc=3.0):
+    ''' Create pointcreate_open3dpoint_cloud_from_rgbd cloud of open3d format, given opencv rgbd images and camera info.
+    Arguments:
+        color_img {np.ndarry, np.uint8}:
+            3 channels of BGR. Undistorted.
+        depth_img {np.ndarry, np.uint16}:
+            Undistorted depth image that matches color_img.
+        cam_info {Open3d's camera info}
+        depth_unit {float}:
+            if depth_img[i, j] is x, then the real depth is x*depth_unit meters.
+        depth_trunc {float}:
+            Depth value larger than ${depth_trunc} meters
+            gets truncated to 0.
+    Output:
+        open3d_point_cloud {open3d.geometry.PointCloud}
+            See: http://www.open3d.org/docs/release/python_api/open3d.geometry.PointCloud.html
+    Reference:
+    '''
+
+    # Create `open3d.geometry.RGBDImage` from color_img and depth_img.
+    rgbd_image = open3d.geometry.RGBDImage.create_from_color_and_depth(
+        color=open3d.geometry.Image(
+            cv2.cvtColor(color_img, cv2.COLOR_BGR2RGB)),
+        depth=open3d.geometry.Image(depth_img),
+        depth_scale=1.0/depth_unit,
+        convert_rgb_to_intensity=False)
+
+    # Project image pixels into 3D world points.
+    # Output type: `class open3d.geometry.PointCloud`.
+    open3d_point_cloud = open3d.geometry.PointCloud.create_from_rgbd_image(
+        image=rgbd_image,
+        intrinsic=cam_info)
+
+    return open3d_point_cloud

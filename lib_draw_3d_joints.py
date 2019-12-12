@@ -56,7 +56,11 @@ class AbstractPart(object):
         '''
         self._id = id
         self._rgbd = rgbd
-        self._links = self._create_links(joints)
+        self._2d_joints = joints
+        self._joints_xyz_in_camera, self._joints_xyz_in_world, self._joints_validity = \
+            self._create_3d_joints(joints)
+        self._links = self._create_links(
+            self._joints_xyz_in_world, self._joints_validity)
         self._marker_ids = []
 
     def draw_rviz(self):
@@ -87,15 +91,13 @@ class AbstractPart(object):
             RvizMarker.delete_marker(markder_id)
         self._marker_ids = []
 
-    def _create_links(self, joints_2d):
+    def _create_links(self, joints_xyz_in_world, joints_validity):
         '''
         Return:
             valid_links {list}:
                 Each element is a link.
                 A link is a list of joint positions.
         '''
-        joints_xyz_in_world, joints_validity = self._create_3d_joints(
-            joints_2d)
         if IS_DRAW_BY_STRANDS:
             # Use `RvizMarker.draw_single_strand_links`
             valid_links = []
@@ -139,7 +141,7 @@ class AbstractPart(object):
         joints_validity = [is_valid(i, col_row_conf[0], col_row_conf[1])
                            for i, col_row_conf in enumerate(joints_2d)]
 
-        return joints_xyz_in_world, joints_validity
+        return joints_xyz_in_camera, joints_xyz_in_world, joints_validity
 
 
 class Body(AbstractPart):
@@ -172,8 +174,20 @@ class Body(AbstractPart):
         [15, 17],
     ]
 
+    RIGHT_ARM_JOINTS = [2, 3, 4]
+    LEFT_ARM_JOINTS = [5, 6, 7]
+
     def __init__(self, *args):
         super(Body, self).__init__(*args)
+
+    def get_right_arm(self):
+        ret = np.all([self._joints_validity[i] for i in Body.LEFT_ARM_JOINTS])
+        if not ret:
+            return False, []
+        three_joints_xyz_camera = \
+            [self._joints_xyz_in_camera[i]
+             for i in Body.RIGHT_ARM_JOINTS]
+        return True, np.array(three_joints_xyz_camera)
 
 
 class Hand(AbstractPart):
@@ -262,6 +276,18 @@ class Human(object):
                 part.delete_rviz()
                 rospy.sleep(0.0001)
         self._has_displayed = False
+
+    def get_right_arm(self):
+        ''' Get the three joints of the right arm.
+        Return:
+            ret {bool}:
+                Whether are three joints are available.
+            joints {np.ndarray}:
+                shape=(3, 3)
+                Three rows are: shoulder, elbow, wrist.
+                Three columsn are: x, y, z.
+        '''
+        return self._body.get_right_arm()
 
 
 ''' -------------------------------------- Helper Functions -------------------------------------- '''
