@@ -2,12 +2,13 @@ ros_openpose_rgbd
 ==================================
 Combine Openpose 2D detection results and depth image to obtain human 3D joint positions, and draw in ROS rviz.
 
-**Demo** (Body only; 12 fps; Kind of good.)
+**Demo:** (Body only; 12 fps; Kind of good.)
 ![](doc/video_demo/demo_no_hand.gif)
 
-**Demo** (Body+hand; 3 fps; Inaccurate hands' 3D positions.)
+**Demo:** (Body+hand; 3 fps; Inaccurate hands' 3D positions.)
 ![](doc/video_demo/demo_with_hand.gif)
 
+**Contents:**
 - [ros_openpose_rgbd](#ros-openpose-rgbd)
 - [1. Introduction](#1-introduction)
 - [2. Installation](#2-installation)
@@ -21,10 +22,10 @@ Combine Openpose 2D detection results and depth image to obtain human 3D joint p
 - [4.Results](#4results)
   * [4.1. Speed](#41-speed)
   * [4.2. Accuracy](#42-accuracy)
-- [5. Bugs](#5-bugs)
-
-<small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
-
+- [5. Others](#5-others)
+  * [5.1. Helper Tools](#51-helper-tools)
+  * [5.2. Noisy Realsense](#52-noisy-realsense)
+  * [5.3. Bugs](#53-bugs)
 
 # 1. Introduction
 
@@ -176,7 +177,7 @@ Besides the above problem, the Realsense also doesn't work well as expected. The
 
 # 5. Others
 
-## 5.1. Helper Tools.
+## 5.1. Helper Tools
 
 * Draw point cloud of color/depth image.
     ```
