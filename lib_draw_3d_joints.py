@@ -61,9 +61,9 @@ class AbstractPart(object):
 
     def draw_rviz(self):
         curr_id = self._id
-        if IS_DRAW_BY_STRANDS:
+        if IS_DRAW_BY_STRANDS:  # Deprecated.
             for i, link in enumerate(self._links):
-                RvizMarker.draw_links(curr_id, link)
+                RvizMarker.draw_single_strand_links(curr_id, link)
                 self._marker_ids.append(curr_id)
                 curr_id += 1
             if IS_DRAW_DOTS:
@@ -72,20 +72,20 @@ class AbstractPart(object):
                     self._marker_ids.append(curr_id)
                     curr_id += 1
         else:
+            if len(self._links) == 0:
+                return
             RvizMarker.draw_links(curr_id, self._links)
             self._marker_ids.append(curr_id)
             curr_id += 1
-            if IS_DRAW_DOTS and len(self._links) > 0:
-                joints = [self._links[0]]
-                for i in range(2, len(self._links)):
-                    joints.append(self._links[i])
-                RvizMarker.draw_dots(curr_id, joints)
+            if IS_DRAW_DOTS:
+                RvizMarker.draw_dots(curr_id, self._links)
                 self._marker_ids.append(curr_id)
                 curr_id += 1
 
     def delete_rviz(self):
         for markder_id in self._marker_ids:
             RvizMarker.delete_marker(markder_id)
+        self._marker_ids = []
 
     def _create_links(self, joints_2d):
         '''
@@ -229,16 +229,26 @@ class Human(object):
         id_l_hand = self._id * GAP + 30
         id_r_hand = self._id * GAP + 60
         self._body = Body(id_body, rgbd, body_joints)
+        self._left_hand, self._right_hand = None, None
         if hand_joints is not None:
+            number_of_hands = hand_joints.shape[0]
             self._left_hand = Hand(id_l_hand, rgbd, hand_joints[0])
-            self._right_hand = Hand(id_r_hand, rgbd, hand_joints[1])
+            if number_of_hands > 1:  # I guess if there is only one hand, it's the left hand.
+                # I didn't find the description of this part in openpose website.
+                self._right_hand = Hand(id_r_hand, rgbd, hand_joints[1])
 
         # Store all the above into a list.
         self._parts = [self._body]
-        if hand_joints is not None:
-            self._parts.extend([self._left_hand, self._right_hand])
-
+        if self._left_hand is not None:
+            self._parts.append(self._left_hand)
+        if self._right_hand is not None:
+            self._parts.append(self._right_hand)
         return
+
+    def get_hands_str(self):
+        s = "Hands: left = {}, right = {}".format(
+            self._left_hand is not None, self._right_hand is not None)
+        return s
 
     def draw_rviz(self):
         for part in self._parts:
@@ -252,35 +262,6 @@ class Human(object):
                 part.delete_rviz()
                 rospy.sleep(0.0001)
         self._has_displayed = False
-
-    # def __del__(self):
-    #     self.delete_rviz()
-
-    # def get_Pointer_directions(self):
-    #     ''' Get where each hand is pointing to. '''
-    #     return [self._Pointer(self.left_hand), self._Pointer(self.right_hand)]
-
-    # def draw_Pointer_direction(self):
-    #     ''' Draw a line onto rviz. '''
-    #     left_pointer, right_pointer=self.get_Pointer_directions()
-    #     left_pointer.draw_rviz()
-    #     right_pointer.draw_rviz()
-
-    # def check_pointintg(self, objects):
-    #     pass
-    #     for obj in objects:
-    #         if obj.is_pointed():
-    #             obj.draw_rviz(True)
-    #         else:
-    #             obj.draw_rviz(False)
-
-    # class _Pointer(object):
-    #     def __init__(self, hand):
-    #         pass
-
-    #     def draw_rviz(self):
-    #         ''' Draw the pointing onto rviz. '''
-    #         pass
 
 
 ''' -------------------------------------- Helper Functions -------------------------------------- '''
@@ -319,14 +300,11 @@ def set_default_params():
         [0.,  0., 0., 1.],
     ])
 
-    # # To make the skeleton allign with point cloud,
-    # # let's make the camera pose at origin.
-    # # cam_pose = np.identity(4)
-
     # Camera pose publisher.
     base_frame = "base"
+    camera_frame = "camera_link"
     cam_pose_pub = CameraPosePublisher(
-        frame_id_camera="camera_link",
+        frame_id_camera=camera_frame,
         frame_id_world=base_frame,
         T4x4_world_to_cam=cam_pose)
 

@@ -28,7 +28,9 @@ class RgbdImage(object):
         Get the 3d position of the pixel (y, x) from depth image.
         The pixel is at yth row and xth column.
         '''
-        row, col = self._xy_to_row_col(x, y)
+        ret, row, col = self._xy_to_row_col(x, y)
+        if not ret:
+            return [0, 0, 0]
         d = self._depth[row, col]
         xyz = [
             (col - self._cx)*d/self._fx,
@@ -37,12 +39,18 @@ class RgbdImage(object):
         return xyz
 
     def is_depth_valid(self, x, y):
-        row, col = self._xy_to_row_col(x, y)
+        ret, row, col = self._xy_to_row_col(x, y)
+        if not ret:
+            return False
         return self._depth[row, col] >= 0.00001
 
     def _xy_to_row_col(self, x, y):
         # row, col = round(self._row * y), round(self._col * x)
-        return int(round(y)), int(round(x))
+        row, col = int(round(y)), int(round(x))
+        if row < 0 or row >= self._row or col < 0 or col >= self._col:
+            return False, 0, 0
+        else:
+            return True, row, col
 
     def camera_pose(self):
         return self._camera_pose
@@ -116,10 +124,15 @@ class MyCameraInfo():
         return row, col, fx, fy, cx, cy
 
     def _from_ros_camera_info(self, ros_camera_info):
+        K = ros_camera_info.K  # ROS is row majored.
+        # However, here I'm using column majored.
         data = {
             "width": ros_camera_info.width,
             "height": ros_camera_info.height,
-            "intrinsic_matrix": ros_camera_info.K,
+            "intrinsic_matrix": [
+                K[0], K[3], K[6],
+                K[1], K[4], K[7],
+                K[2], K[5], K[8]]
         }
         return data
 

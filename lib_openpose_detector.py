@@ -47,7 +47,7 @@ class OpenposeDetector(object):
                     3: [pixel_column, pixel_row, confidence]. 
                         The not-detected joint has a [0., 0., 0.] value.
                 datum.poseKeypoints {list}:
-                    List length is 2, which are the left hand and the right hand.
+                    List length is 1 or 2, which are the left hand and the right hand.
                     Each element is a np.ndarray of shape = [P, M, 3]
                     P and 3 have the same meaning as `poseKeypoints`.
                     M: M body joints.
@@ -60,13 +60,20 @@ class OpenposeDetector(object):
         # print("Body keypoints: \n" + str(datum.poseKeypoints))
         # print("Hand keypoints: \n" + str(datum.handKeypoints))
         if is_return_joints:
-            body_joints = np.array(datum.poseKeypoints)
-            if self._params["hand"] == False:
-                number_of_people = body_joints.shape[0]
-                hand_joints = [None] * number_of_people
+            body_joints = datum.poseKeypoints
+            if len(body_joints.shape) == 0:  # Detect no people.
+                body_joints = []
+            number_of_people = len(body_joints)
+            body_joints = np.array(body_joints)
+            if number_of_people == 0:
+                hand_joints = []
             else:
-                hand_joints = np.array(datum.handKeypoints)
-                np.swapaxes(hand_joints, 0, 1)  # reshape to [P, 2, M, 3]
+                if self._params["hand"] == False:
+                    # The joints of each person is None.
+                    hand_joints = [None] * number_of_people
+                else:
+                    hand_joints = np.array(datum.handKeypoints)
+                    hand_joints = hand_joints.swapaxes(0, 1)  # reshape to [P, 2, M, 3]
             return body_joints, hand_joints
         else:
             return datum

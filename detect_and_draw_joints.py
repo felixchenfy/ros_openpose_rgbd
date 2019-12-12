@@ -7,6 +7,7 @@ import rospy
 import argparse
 import glob
 import time
+import math
 
 from lib_draw_3d_joints import Human, set_default_params
 from lib_openpose_detector import OpenposeDetector
@@ -18,6 +19,7 @@ if True:  # Add project root
     sys.path.append(ROOT)
     from utils.lib_rgbd import RgbdImage, MyCameraInfo
     from utils.lib_ros_rgbd_pub_and_sub import ColorImageSubscriber, DepthImageSubscriber, CameraInfoSubscriber
+    from utils.lib_geo_trans import rotx, roty, rotz, get_Rp_from_T, form_T
 
 
 def parse_command_line_arguments():
@@ -35,6 +37,15 @@ def parse_command_line_arguments():
     parser.add_argument("-u", "--depth_unit", type=float,
                         default="0.001",
                         help="Depth is (pixel_value * depth_unit) meters.")
+    parser.add_argument("-r", "--is_using_realsense", type=Bool,
+                        default=False,
+                        help="If the data source is Realsense, set this to true. "
+                        "Then, the drawn joints will change the coordinate to be the same as "
+                        "Realsense's point cloud. The reason is,"
+                        "I used a different coordinate direction than Realsense."
+                        "(1) For me, I use X-Right, Y-Down, Z-Forward,"
+                        "which is the convention for camera."
+                        "(2) For Realsense ROS package, it's X-Forward, Y-Left, Z-Up.")
 
     # -- "rostopic" as data source.
     parser.add_argument("-a", "--ros_topic_color",
@@ -172,6 +183,10 @@ def main(args):
 
     # -- Settings.
     cam_pose, cam_pose_pub = set_default_params()
+    if args.is_using_realsense: # Change coordinate.
+        R, p = get_Rp_from_T(cam_pose)
+        R = roty(math.pi/2).dot(rotz(-math.pi/2)).dot(R)
+        cam_pose = form_T(R, p)
 
     # -- Loop: read, detect, draw.
     prev_humans = []
@@ -205,13 +220,13 @@ def main(args):
             human.draw_rviz()
             rospy.loginfo("  Drawing {}/{}th person with id={} on rviz.".format(
                 i+1, N_people, human._id))
+            rospy.loginfo("    " + human.get_hands_str())
             humans.append(human)
-
-        # -- Loop.
         prev_humans = humans
-        # Keep update camera pose for rviz visualization.
-        cam_pose_pub.publish()
         print("Total time = {} seconds.".format(time.time()-t0))
+
+        # -- Keep update camera pose for rviz visualization.
+        cam_pose_pub.publish()
 
         # -- Reset data.
         if args.data_source == "disk" and ith_image == total_images:

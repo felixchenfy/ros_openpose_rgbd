@@ -127,6 +127,7 @@ class CameraInfoPublisher():
         Arguments:
             intrinsic_matrix {1D list or 2D list}: 
                 If 1D list, the data order is: column1, column2, column3.
+                (But ROS is row majored.)
         '''
         # -- Set camera info.
         camera_info = self._default_camera_info
@@ -160,11 +161,15 @@ class CameraInfoPublisher():
         camera_info.height = height
         camera_info.width = width
         if isinstance(intrinsic_matrix, list):
-            K = intrinsic_matrix
-        else:
+            K = intrinsic_matrix # column majored --> row majored.
+            K = [
+                K[0], K[3], K[6], 
+                K[1], K[4], K[7], 
+                K[2], K[5], K[8], 
+            ]
+        else: # row majored.
             K = self._2d_array_to_list(intrinsic_matrix)
         camera_info.K = K
-
         camera_info.P = [
             K[0], K[1], K[2], 0.0,
             K[3], K[4], K[5], 0.0,

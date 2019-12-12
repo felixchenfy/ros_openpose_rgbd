@@ -1,6 +1,6 @@
 ros_openpose_rgbd
 ==================================
-Combine Openpose 2D detection results and depth image to obtain 3D joint positions, and draw in ROS rviz.
+Combine Openpose 2D detection results and depth image to obtain human 3D joint positions, and draw in ROS rviz.
 
 **Demo** (Body only; 12 fps; Kind of good.)
 ![](doc/video_demo/demo_no_hand.gif)
@@ -117,12 +117,10 @@ ROOT=$(rospack find ros_openpose_rgbd)
 cd ${ROOT}/.. # cd to ~/catkin_ws/src/ folder.
 if [ ! -d "ros_pub_and_sub_rgbd_and_cloud" ]; then
     repo="https://github.com/felixchenfy/ros_pub_and_sub_rgbd_and_cloud"
-    echo "Installing rgbd images publisher: ${repo}"
     git clone ${repo}
     cd ros_pub_and_sub_rgbd_and_cloud
     chmod a+x pub_rgbd_and_cloud.py
 fi
-cd ${ROOT}
 ```
 
 OK. Now publish data, and start detection and drawing:
@@ -137,17 +135,19 @@ rosrun ros_openpose_rgbd detect_and_draw_joints.py \
     --detect_hand true # true or false
 ```
 
+The publish rate is set as 1 image/second. Please read [launch/publish_test_rgbd_data.launch](launch/publish_test_rgbd_data.launch), and change publish settings in [config/publish_test_rgbd_data_config.yaml](config/publish_test_rgbd_data_config.yaml).
+
 ## 3.4. Test Data from Realsense
-In 3.3, the data is read from disk and published to ROS topics. Here we read it from Realsense.
+
+In 3.3, the data is read from disk and published to ROS topics. Here we read it from Realsense D435.
+
 ```
 roslaunch ros_openpose_rgbd run_realsense.launch
 rosrun ros_openpose_rgbd detect_and_draw_joints.py \
-    --data_source rostopic
+    --data_source rostopic \
+    --is_using_realsense true \
     --detect_hand false # My laptop is not fast enough to detect hand.
 ```
-
-**Bug:** The point cloud published by Realsense doesn't match the 3D skeletons drawn by me.  
-The reason is that I used a different coordinate direction than Realsense. (1) For me, I use X-Right, Y-Down, Z-Forward, which is the convention for camera. (2) For Realsense ROS package, it's X-Forward, Y-Left, Z-Up. 
 
 # 4.Results
 
@@ -167,5 +167,7 @@ See the two gif at the top of this README.
     (1) One thing is that due to self-occlusion and motion blur, sometimes 2D joints are not detected or are not accurate. 
     (2) Another thing is that finger's depth is very inaccurate. We know that the depth near an object's edge is likely to be noisy, and this is especially severe for small and thing objects like fingers.
 
+Besides the above problem, the Realsense also doesn't work well as expected. The measured depth value becomes inaccurate when the object is 1 meter away. I didn't do the experiment, but I feel it's about 1cm error at 1 meter, and up to 10cm when the object is several meters away (Let's say 4 meters). Also, the depth is fluctuating noticeably for distant objects, which can even be noticed from depth image.
+
 # 5. Bugs
-* The ROS marker `delete` function sometimes doesn't work. I can't solve it right now, maybe you need to close rviz and open it again in order to clear the ROS markers. BTW, my function is defined in [utils/lib_rviz_marker.py](utils/lib_rviz_marker.py) and `def delete_marker`. 
+* The ROS marker `delete` function sometimes doesn't work. I can't solve it right now, maybe you need to close rviz and open it again in order to clear the ROS markers. The corresponding delete function is defined in [utils/lib_rviz_marker.py](utils/lib_rviz_marker.py) and `def delete_marker`. 
