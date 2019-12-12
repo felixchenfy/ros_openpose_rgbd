@@ -46,11 +46,23 @@ class OpenposeDetector(object):
                     N: N body joints defined by the detector model, such as COCO and MPI.
                     3: [pixel_column, pixel_row, confidence]. 
                         The not-detected joint has a [0., 0., 0.] value.
-                datum.poseKeypoints {list}:
+                datum.poseKeypoints {np.ndarray}:
+                    When there are no humans detected, 
+                    this variable becomes a number of the type np.ndarray???
+                datum.handKeypoints {list}:
                     List length is 1 or 2, which are the left hand and the right hand.
                     Each element is a np.ndarray of shape = [P, M, 3]
                     P and 3 have the same meaning as `poseKeypoints`.
-                    M: M body joints.
+                datum.handKeypoints {list}:
+                    When there are no humans detected, 
+                    this variable becomes a list with two numbers???
+            body_joints {np.ndarray}:
+                 [P, N, 3]. P is humans number; N is joints number.
+            body_joints {list or np.ndarray}:
+                If params["hand"] == False, return [None]*number_of_people
+                Else if no human, return [];
+                Else, return np.ndarray of dimension [P, 2, N, 3]
+
         For model definition, please see:
             https://github.com/CMU-Perceptual-Computing-Lab/openpose/blob/master/doc/output.md
         '''
