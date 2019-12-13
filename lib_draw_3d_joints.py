@@ -229,9 +229,12 @@ class Hand(AbstractPart):
 class Human(object):
     _cnt_all_humans = 0
 
-    def __init__(self, rgbd, body_joints, hand_joints):
+    def __init__(self, rgbd, body_joints, hand_joints, id=None):
         Human._cnt_all_humans += 1
-        self._id = Human._cnt_all_humans
+        if id is None:
+            self._id = Human._cnt_all_humans
+        else:
+            self._id = id
         self._has_displayed = False
         self.set_joints(rgbd, body_joints, hand_joints)
         pass
