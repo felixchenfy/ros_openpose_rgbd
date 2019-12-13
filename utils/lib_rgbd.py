@@ -41,6 +41,9 @@ class RgbdImage(object):
             d]
         return xyz
 
+    def get_color_image(self):
+        return self._color
+        
     def is_depth_valid(self, x, y):
         ret, row, col = self._xy_to_row_col(x, y)
         if not ret:
@@ -57,6 +60,9 @@ class RgbdImage(object):
 
     def camera_pose(self):
         return self._camera_pose
+    
+    def intrinsic_matrix(self):
+        return self._camera_info.intrinsic_matrix(type="matrix")
 
     def set_camera_pose(self, camera_pose):
         self._camera_pose = camera_pose

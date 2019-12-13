@@ -33,6 +33,7 @@ class OpenposeDetector(object):
         self._opWrapper = op.WrapperPython()
         self._opWrapper.configure(self._params)
         self._opWrapper.start()  # Start Openpose.
+        self._datum = None
 
     def detect(self, color_image, is_return_joints=False):
         '''
@@ -69,6 +70,7 @@ class OpenposeDetector(object):
         datum = op.Datum()
         datum.cvInputData = color_image
         self._opWrapper.emplaceAndPop([datum])
+        self._datum = datum
         # print("Body keypoints: \n" + str(datum.poseKeypoints))
         # print("Hand keypoints: \n" + str(datum.handKeypoints))
         if is_return_joints:
@@ -85,7 +87,8 @@ class OpenposeDetector(object):
                     hand_joints = [None] * number_of_people
                 else:
                     hand_joints = np.array(datum.handKeypoints)
-                    hand_joints = hand_joints.swapaxes(0, 1)  # reshape to [P, 2, M, 3]
+                    hand_joints = hand_joints.swapaxes(
+                        0, 1)  # reshape to [P, 2, M, 3]
             return body_joints, hand_joints
         else:
             return datum
@@ -161,7 +164,9 @@ class OpenposeDetector(object):
                 params[key] = param
 
         return params
-
+    
+    def get_img_viz(self):
+        return self._datum.cvOutputData
 
 def makedir(folder):
     folder = os.path.dirname(folder)

@@ -74,7 +74,7 @@ class RvizMarker(object):
         RvizMarker._V_LINK.set_params(size, color, lifetime)
 
     @staticmethod
-    def draw_dot(id, xyz):
+    def draw_dot(id, xyz, _color=None, _size=None):
         marker = copy.deepcopy(RvizMarker._MARKER_TEMPLATE)
         size, color, lifetime = RvizMarker._V_DOT.get_params()
         marker.id = id
@@ -83,10 +83,14 @@ class RvizMarker(object):
         marker.pose.position.x = xyz[0]
         marker.pose.position.y = xyz[1]
         marker.pose.position.z = xyz[2]
+
+        size = _size if _size else size
         marker.scale.x = size
         marker.scale.y = size
         marker.scale.z = size
-        marker.color = COLORS[color]
+
+        marker.color = COLORS[_color] if _color else COLORS[color]
+
         if lifetime > 0:
             marker.lifetime = rospy.Duration(lifetime)
         RvizMarker._pub.publish(marker)
